@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Fun with Flags - Single Player</title>
     <link rel="stylesheet" href="/static/css/game.css" />
+    <link rel="stylesheet" href="/static/css/root.css" />
   </head>
   <body>
     <h1>Fun with Flags</h1>
@@ -13,8 +14,7 @@
       <div class="modal-content">
         <h2>Select Number of Questions</h2>
         <input type="range" id="num-questions" min="10" max="25" value="10" />
-        <span id="range-value">10</span>
-        <!-- Show the selected number -->
+        <p id="range-value">10</p>
         <button id="start-game-btn">Start Game</button>
         <p id="error-message" class="error-message hidden"></p>
       </div>
@@ -30,26 +30,16 @@
 
     <footer>
       <a href="/">Home</a>
+      <a href="/play">New Game</a>
       <a href="https://github.com/adimail/fun-with-flags" target="_blank"
         >GitHub</a
       >
-      <button id="endgame">End Game</button>
+      <button onclick="toggleTheme()">Toggle Theme</button>
     </footer>
 
-    <div id="game-modal" class="modal hidden">
-      <div class="modal-content">
-        <h2>Game Over!</h2>
-        <p id="final-score"></p>
-        <div class="modal-actions">
-          <a href="/play">New Game</a>
-          <a href="/">Home</a>
-          <a href="https://github.com/adimail/fun-with-flags" target="_blank"
-            >GitHub</a
-          >
-        </div>
-      </div>
-    </div>
+    <script></script>
 
     <script defer type="module" src="/static/js/game.singleplayer.js"></script>
+    <script defer src="/static/js/theme.js"></script>
   </body>
 </html>
