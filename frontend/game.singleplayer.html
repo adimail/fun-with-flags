@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fun with Flags - Single Player</title>
+    <link rel="stylesheet" href="/static/css/game.css" />
+  </head>
+  <body>
+    <h1>Fun with Flags</h1>
+
+    <div id="question-modal" class="modal">
+      <div class="modal-content">
+        <h2>Select Number of Questions</h2>
+        <input type="range" id="num-questions" min="10" max="25" value="10" />
+        <span id="range-value">10</span>
+        <!-- Show the selected number -->
+        <button id="start-game-btn">Start Game</button>
+        <p id="error-message" class="error-message hidden"></p>
+      </div>
+    </div>
+
+    <main>
+      <div id="game" class="hidden">
+        <p id="progress"></p>
+        <img id="flag" class="flag" src="" alt="Country Flag" />
+        <div id="options" class="options"></div>
+      </div>
+    </main>
+
+    <footer>
+      <a href="/">Home</a>
+      <a href="https://github.com/adimail/fun-with-flags" target="_blank"
+        >GitHub</a
+      >
+      <button id="endgame">End Game</button>
+    </footer>
+
+    <div id="game-modal" class="modal hidden">
+      <div class="modal-content">
+        <h2>Game Over!</h2>
+        <p id="final-score"></p>
+        <div class="modal-actions">
+          <a href="/play">New Game</a>
+          <a href="/">Home</a>
+          <a href="https://github.com/adimail/fun-with-flags" target="_blank"
+            >GitHub</a
+          >
+        </div>
+      </div>
+    </div>
+
+    <script defer type="module" src="/static/js/game.singleplayer.js"></script>
+  </body>
+</html>
