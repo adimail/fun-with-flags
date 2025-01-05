@@ -53,6 +53,17 @@ async function createRoom() {
 
     hideError();
 
+    // Validate username
+    if (!host) {
+      showError("Please enter your username.");
+      return;
+    }
+    if (host.length < 4) {
+      showError("Username must be at least 4 characters long.");
+      return;
+    }
+
+    // Validate other inputs
     if (
       !timeLimit ||
       !numQuestions ||
@@ -84,19 +95,40 @@ async function createRoom() {
 
     const data = await response.json();
 
-    elements.roomCodeValue.textContent = data.roomCode;
-    elements.numQuestionsValue.textContent = numQuestions;
-    elements.timeLimitValue.textContent = timeLimit;
+    elements.roomCodeValue.textContent = data.code;
+    elements.numQuestionsValue.textContent = data.numQuestions;
+    elements.timeLimitValue.textContent = data.timeLimit / 60;
+    document.getElementById("host-name-value").textContent = data.host;
+    document.getElementById("num-players-value").textContent = Object.keys(
+      data.players,
+    ).length;
+    document.getElementById("game-started-value").textContent = data.start
+      ? "Yes"
+      : "No";
 
     elements.createRoomForm.classList.add("hidden");
     elements.roomCode.classList.remove("hidden");
 
     elements.copyRoomCode.addEventListener("click", () =>
-      copyRoomCode(data.roomCode),
+      copyRoomCode(data.code),
     );
+
+    populatePlayerList(data.players);
   } catch (error) {
     showError(error.message);
   }
+}
+
+function populatePlayerList(players) {
+  const playerList = document.getElementById("player-list");
+  playerList.innerHTML = "";
+
+  players.forEach((player) => {
+    const li = document.createElement("li");
+
+    li.textContent = player.Username;
+    playerList.appendChild(li);
+  });
 }
 
 elements.createRoomBtn.addEventListener("click", createRoom);

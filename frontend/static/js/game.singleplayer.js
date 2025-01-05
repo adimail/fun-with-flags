@@ -27,7 +27,7 @@ function shuffleArray(array) {
 }
 
 function updateProgress(currentIndex, totalQuestions) {
-  const progressElement = document.getElementById("progrehttp://localhost:8080/createroomhttp://localhost:8080/createroomss");
+  const progressElement = document.getElementById("progress");
   progressElement.textContent = `Question ${currentIndex + 1} of ${totalQuestions}`;
 }
 

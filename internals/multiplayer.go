@@ -3,7 +3,6 @@ package internals
 import (
 	"encoding/json"
 	"errors"
-	"log"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -16,8 +15,8 @@ import (
 var rooms = make(map[string]*game.Room)
 
 func generateRoomCode() string {
-	rand.Seed(time.Now().UnixNano())
-	return strconv.Itoa(rand.Intn(10000)) // Generate a random 4-digit room code
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	return strconv.Itoa(rng.Intn(10000))
 }
 
 // ErrorResponse represents a standardized error structure
@@ -64,8 +63,11 @@ func createRoomHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("Received request to create room")
-	log.Printf("Request Body: %+v", req)
+	questions, err := generateQuestions(req.NumQuestions)
+	if err != nil {
+		http.Error(w, "Failed to generate questions: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	roomCode := generateRoomCode()
 	room := &game.Room{
@@ -79,21 +81,25 @@ func createRoomHandler(w http.ResponseWriter, r *http.Request) {
 
 	hostPlayer := &game.Player{
 		Username: req.HostUsername,
-		Score:    0,
 	}
+
 	// Simulate adding the host as a player (without WebSocket connection yet)
 	room.Players[nil] = true // Placeholder for WebSocket connection
 
+	for i, q := range questions {
+		room.Questions[strconv.Itoa(i)] = &q
+	}
+
 	rooms[roomCode] = room
 
-	// Prepare response data
 	response := map[string]interface{}{
-		"code":      room.Code,
-		"host":      hostPlayer,
-		"players":   []game.Player{{Username: req.HostUsername, Score: 0}}, // Simplified players list
-		"questions": room.Questions,                                        // Initially empty
-		"start":     room.Start,
-		"timeLimit": room.TimeLimit,
+		"code":    room.Code,
+		"host":    hostPlayer.Username,
+		"players": []game.Player{{Username: req.HostUsername, Score: 0}},
+		// "questions":    questions,
+		"start":        room.Start,
+		"timeLimit":    room.TimeLimit,
+		"numQuestions": len(questions),
 	}
 
 	w.Header().Set("Content-Type", "application/json")

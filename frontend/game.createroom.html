@@ -42,7 +42,7 @@
       </div>
     </div>
 
-    <main id="room-code" class="hidden">
+    <main id="room-code" class="hidden waiting-room">
       <table>
         <thead>
           <tr>
@@ -59,6 +59,18 @@
             </td>
           </tr>
           <tr>
+            <td>Host Name</td>
+            <td id="host-name-value"></td>
+          </tr>
+          <tr>
+            <td>Number of Players</td>
+            <td id="num-players-value"></td>
+          </tr>
+          <tr>
+            <td>Game Started</td>
+            <td id="game-started-value"></td>
+          </tr>
+          <tr>
             <td>Number of Questions</td>
             <td id="num-questions-value"></td>
           </tr>
@@ -69,8 +81,14 @@
         </tbody>
       </table>
       <p>Share this code with other players to join the room.</p>
+      <section id="player-list-section">
+        <h3>Players in the Room</h3>
+        <ul id="player-list">
+          <!-- Dynamically populated list of players -->
+        </ul>
+      </section>
       <button onclick="window.location.href='/joinroom'" class="action-btn">
-        Join Room
+        Start Game
       </button>
     </main>
 

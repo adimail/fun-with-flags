@@ -1,8 +1,13 @@
 package internals
 
 import (
+	"encoding/csv"
 	"math/rand"
+	"os"
+	"path/filepath"
 	"time"
+
+	"github.com/adimail/fun-with-flags/internals/game"
 )
 
 func newRandomGenerator() *rand.Rand {
@@ -29,4 +34,42 @@ func selectRandomCountries(rows [][]string, count int, rng *rand.Rand) [][]strin
 		return rows
 	}
 	return rows[:count]
+}
+
+func generateQuestions(numQuestions int) ([]game.Question, error) {
+	file, err := os.Open("./data/countries.csv")
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	rows, err := reader.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+
+	rng := newRandomGenerator()
+	selectedCountries := selectRandomCountries(rows, numQuestions, rng)
+
+	var questions []game.Question
+	for i, row := range selectedCountries {
+		countryName := row[0]
+		countryCode := row[1]
+		flagURL := filepath.Join("/static/svg", countryCode+".svg")
+
+		options := []string{countryName}
+		for j := 0; j < 3; j++ {
+			options = append(options, selectedCountries[(i+j+1)%len(selectedCountries)][0])
+		}
+
+		shuffleOptions(options, rng)
+
+		questions = append(questions, game.Question{
+			FlagURL: flagURL,
+			Options: options,
+			Answer:  countryName,
+		})
+	}
+	return questions, nil
 }

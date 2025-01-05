@@ -141,6 +141,51 @@ body {
   background: var(--secondary-color);
 }
 
+#player-list-section {
+  width: 90%;
+  max-width: 700px;
+  text-align: left;
+  margin-top: 20px;
+  padding: 15px;
+}
+
+#player-list-section h3 {
+  font-size: 18px;
+  color: var(--primary-color);
+  margin-bottom: 10px;
+}
+
+#player-list {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+#player-list li {
+  border: 1px solid #ddd;
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: var(--border-radius);
+  font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+}
+
+#player-list li .status {
+  font-size: 12px;
+  color: #888;
+  font-style: italic;
+}
+
+#player-list li.online {
+  background-color: #d4f8d4;
+  border-color: #4caf50;
+}
+
+#player-list li.offline {
+  background-color: #f8d4d4;
+  border-color: #e74c3c;
+}
+
 h1 {
   display: grid;
   gap: 10px;
@@ -316,6 +361,55 @@ main {
 
 .hidden {
   display: none;
+}
+
+.waiting-room table {
+  width: 100%;
+  max-width: 700px;
+  margin: 20px 0;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.waiting-room th,
+.waiting-room td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.waiting-room th {
+  background-color: cornflowerblue;
+  color: white;
+  font-size: 16px;
+}
+
+.waiting-room td {
+  color: var(--secondary-text-color);
+}
+
+.waiting-room #room-code-value,
+.waiting-room #host-name-value,
+.waiting-room #num-players-value,
+.waiting-room #game-started-value,
+.waiting-room #num-questions-value,
+.waiting-room #time-limit-value {
+  font-weight: bold;
+  color: var(--text-color);
+}
+
+/* Style for Copy Room Code button */
+.waiting-room #copy-room-code {
+  background: none;
+  color: #007bff;
+  font-size: 20px;
+  cursor: pointer;
+  border: none;
+  transition: color 0.3s ease;
+}
+
+.waiting-room #copy-room-code:hover {
+  color: #0056b3;
 }
 
 @media (max-width: 768px) {

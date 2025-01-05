@@ -2,6 +2,7 @@
   --primary-color: #4caf50;
   --secondary-color: #f1f1f1;
   --text-color: #333;
+  --secondary-text-color: #777;
   --hover-color: #45a049;
   --modal-bg-color: rgba(0, 0, 0, 0.6);
   --modal-content-bg: #ffffff;
@@ -20,6 +21,7 @@
   --primary-color: #1e88e5;
   --secondary-color: #121212;
   --text-color: #e0e0e0;
+  --secondary-text-color: #bbb;
   --hover-color: #1565c0;
   --modal-bg-color: rgba(0, 0, 0, 0.8);
   --modal-content-bg: #1e1e1e;
