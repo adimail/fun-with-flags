@@ -73,10 +73,11 @@ func createRoomHandler(w http.ResponseWriter, r *http.Request) {
 	roomID := generateroomID()
 	room := &game.Room{
 		Code:      roomID,
+		Hostname:  req.HostUsername,
 		Players:   make(map[*websocket.Conn]*game.Player),
 		Questions: make(map[string]*game.Question),
 		Start:     false,
-		TimeLimit: req.TimeLimit * 60,
+		TimeLimit: req.TimeLimit,
 	}
 
 	for i, q := range questions {
@@ -89,10 +90,10 @@ func createRoomHandler(w http.ResponseWriter, r *http.Request) {
 
 	response := map[string]interface{}{
 		"code":         room.Code,
-		"host":         req.HostUsername,
+		"host":         room.Hostname,
 		"players":      []game.Player{{Username: req.HostUsername, Score: 0}},
 		"start":        room.Start,
-		"timeLimit":    room.TimeLimit, // Convert seconds to minutes
+		"timeLimit":    room.TimeLimit,
 		"numQuestions": len(questions),
 	}
 
@@ -143,7 +144,7 @@ func joinRoomHandler(w http.ResponseWriter, r *http.Request) {
 
 	response := map[string]interface{}{
 		"code":         room.Code,
-		"host":         room.Host, // Ensure Host is properly set
+		"host":         room.Hostname,
 		"players":      getSerializablePlayers(room),
 		"timeLimit":    room.TimeLimit,
 		"numQuestions": len(room.Questions),

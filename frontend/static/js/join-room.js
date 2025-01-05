@@ -26,7 +26,7 @@ const populatePlayerList = (players) => {
   players.forEach((player) => {
     if (player.username && player.score !== undefined) {
       const li = document.createElement("li");
-      li.textContent = `${player.username} (Score: ${player.score})`;
+      li.textContent = `${player.username}`;
       elements.playerList.appendChild(li);
     }
   });
@@ -37,13 +37,14 @@ const handleWebSocketMessage = (event) => {
   const message = JSON.parse(event.data);
   switch (message.event) {
     case "playerJoined":
-      updatePlayerList(message.data.username, message.data.score);
+      updatePlayerList(message.data.username);
       break;
     case "playerLeft":
+    case "playerDisconnected":
       removePlayer(message.data);
       break;
     case "scoreUpdated":
-      updatePlayerScore(message.data.username, message.data.score);
+      updatePlayerScore(message.data.username);
       break;
     default:
       console.warn("Unhandled WebSocket event:", message.event);
@@ -69,7 +70,17 @@ const openWebSocketConnection = (roomID, username) => {
   };
 };
 
-const updatePlayerList = (username, score = 0) => {
+const populateRoomInfo = (data) => {
+  document.getElementById("room-code-value").textContent = data.code;
+  document.getElementById("host-name-value").textContent = data.host;
+  document.getElementById("num-players-value").textContent =
+    data.players.length;
+  document.getElementById("num-questions-value").textContent =
+    data.numQuestions;
+  document.getElementById("time-limit-value").textContent = data.timeLimit;
+};
+
+const updatePlayerList = (username) => {
   const existingPlayers = Array.from(elements.playerList.children);
   const alreadyExists = existingPlayers.some((li) =>
     li.textContent.startsWith(username),
@@ -77,7 +88,7 @@ const updatePlayerList = (username, score = 0) => {
 
   if (!alreadyExists) {
     const li = document.createElement("li");
-    li.textContent = `${username} (Score: ${score})`;
+    li.textContent = `${username}`;
     elements.playerList.appendChild(li);
     elements.numPlayersValue.textContent =
       parseInt(elements.numPlayersValue.textContent, 10) + 1;
@@ -95,11 +106,11 @@ const removePlayer = (username) => {
   });
 };
 
-const updatePlayerScore = (username, score) => {
+const updatePlayerScore = (username) => {
   const playerItems = Array.from(elements.playerList.children);
   playerItems.forEach((li) => {
     if (li.textContent.startsWith(username)) {
-      li.textContent = `${username} (Score: ${score})`;
+      li.textContent = `${username}`;
     }
   });
 };
@@ -128,7 +139,10 @@ const joinRoom = async () => {
     }
 
     const data = await response.json();
+
+    populateRoomInfo(data);
     populatePlayerList(data.players);
+
     openWebSocketConnection(data.code, username);
 
     elements.joinRoomForm.classList.add("hidden");

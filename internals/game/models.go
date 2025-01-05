@@ -26,6 +26,7 @@ type GameState struct {
 type Room struct {
 	Code      string
 	Host      *websocket.Conn
+	Hostname  string
 	Players   map[*websocket.Conn]*Player
 	Questions map[string]*Question
 	Start     bool
