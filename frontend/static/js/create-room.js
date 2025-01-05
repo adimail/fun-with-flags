@@ -23,13 +23,11 @@ const handleRangeInput = (event, displayElement) => {
 };
 
 const showError = (message) => {
-  console.log("[Error] Show:", message);
   elements.errorMessage.textContent = message;
   elements.errorMessage.classList.remove("hidden");
 };
 
 const hideError = () => {
-  console.log("[Error] Hide");
   elements.errorMessage.textContent = "";
   elements.errorMessage.classList.add("hidden");
 };
@@ -37,75 +35,99 @@ const hideError = () => {
 const copyToClipboard = async (text) => {
   try {
     await navigator.clipboard.writeText(text);
-    console.log("[Clipboard] Copied:", text);
     alert("Room code copied to clipboard!");
   } catch (err) {
-    console.error("[Clipboard] Error:", err);
+    console.error("Error copying to clipboard:", err);
   }
 };
 
 const populatePlayerList = (players) => {
-  console.log("[PlayerList] Populating with:", players);
-  elements.playerList.innerHTML = "";
+  elements.playerList.innerHTML = ""; // Clear the list
   players.forEach((player) => {
-    const li = document.createElement("li");
-    li.textContent = player.Username || player.username;
-    elements.playerList.appendChild(li);
+    if (player.username && player.score !== undefined) {
+      const li = document.createElement("li");
+      li.textContent = `${player.username} (Score: ${player.score})`;
+      elements.playerList.appendChild(li);
+    }
   });
   elements.numPlayersValue.textContent = players.length;
 };
 
+const handleWebSocketMessage = (event) => {
+  const message = JSON.parse(event.data);
+  switch (message.event) {
+    case "playerJoined":
+      updatePlayerList(message.data.username, message.data.score);
+      break;
+    case "playerLeft":
+      removePlayer(message.data);
+      break;
+    case "scoreUpdated":
+      updatePlayerScore(message.data.username, message.data.score);
+      break;
+    default:
+      console.warn("Unhandled WebSocket event:", message.event);
+  }
+};
+
 const openWebSocketConnection = (roomID, username) => {
-  console.log("[WebSocket] Opening for room:", roomID);
   socket = new WebSocket("ws://localhost:8080/ws");
 
   socket.onopen = () => {
-    console.log("[WebSocket] Connection established");
     socket.send(JSON.stringify({ username, roomID }));
   };
 
-  socket.onmessage = (event) => {
-    console.log("[WebSocket] Message:", event.data);
-    try {
-      const message = JSON.parse(event.data);
-      if (message.roomID === roomID && message.event === "playerJoined") {
-        console.log("[WebSocket] Player joined:", message.data.username);
-        updatePlayerList(message.data.username);
-      }
-    } catch (error) {
-      console.error("[WebSocket] Parse error:", error);
-    }
-  };
+  socket.onmessage = handleWebSocketMessage;
 
   socket.onerror = (error) => {
-    console.error("[WebSocket] Error:", error);
-    showError("WebSocket error.");
+    showError("WebSocket error occurred.");
+    console.error("WebSocket error:", error);
   };
 
   socket.onclose = () => {
-    console.log("[WebSocket] Closed");
+    console.log("WebSocket connection closed.");
   };
 };
 
-const updatePlayerList = (newPlayerName) => {
-  console.log("[PlayerList] Adding:", newPlayerName);
-  const existingPlayer = Array.from(elements.playerList.children).some(
-    (li) => li.textContent === newPlayerName,
+const updatePlayerList = (username, score = 0) => {
+  const existingPlayers = Array.from(elements.playerList.children);
+  const alreadyExists = existingPlayers.some((li) =>
+    li.textContent.startsWith(username),
   );
 
-  if (!existingPlayer) {
+  if (!alreadyExists) {
     const li = document.createElement("li");
-    li.textContent = newPlayerName;
+    li.textContent = `${username} (Score: ${score})`;
     elements.playerList.appendChild(li);
     elements.numPlayersValue.textContent =
-      parseInt(elements.numPlayersValue.textContent) + 1;
+      parseInt(elements.numPlayersValue.textContent, 10) + 1;
   }
+};
+
+const removePlayer = (username) => {
+  const playerItems = Array.from(elements.playerList.children);
+  playerItems.forEach((li) => {
+    if (li.textContent.startsWith(username)) {
+      elements.playerList.removeChild(li);
+      elements.numPlayersValue.textContent =
+        parseInt(elements.numPlayersValue.textContent, 10) - 1;
+    }
+  });
+};
+
+const updatePlayerScore = (username, score) => {
+  const playerItems = Array.from(elements.playerList.children);
+  playerItems.forEach((li) => {
+    if (li.textContent.startsWith(username)) {
+      li.textContent = `${username} (Score: ${score})`;
+    }
+  });
 };
 
 const createRoom = async () => {
   try {
-    const timeLimit = elements.timeLimit.value;
-    const numQuestions = elements.numQuestions.value;
+    const timeLimit = parseInt(elements.timeLimit.value, 10);
+    const numQuestions = parseInt(elements.numQuestions.value, 10);
     const host = elements.hostUsername.value.trim();
 
     hideError();
@@ -115,24 +137,10 @@ const createRoom = async () => {
       return;
     }
 
-    if (
-      !timeLimit ||
-      !numQuestions ||
-      isNaN(timeLimit) ||
-      isNaN(numQuestions)
-    ) {
-      showError("Invalid time limit or question count.");
-      return;
-    }
-
     const response = await fetch("/api/createroom", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        timeLimit: parseInt(timeLimit),
-        numQuestions: parseInt(numQuestions),
-        hostUsername: host,
-      }),
+      body: JSON.stringify({ timeLimit, numQuestions, hostUsername: host }),
     });
 
     if (!response.ok) {
@@ -141,19 +149,13 @@ const createRoom = async () => {
     }
 
     const data = await response.json();
-    console.log("[CreateRoom] Created:", data);
-
     elements.roomIDValue.textContent = data.code;
     elements.numQuestionsValue.textContent = data.numQuestions;
-    elements.timeLimitValue.textContent = data.timeLimit / 60;
+    elements.timeLimitValue.textContent = data.timeLimit;
     document.getElementById("host-name-value").textContent = data.host;
 
     elements.createRoomForm.classList.add("hidden");
     elements.roomID.classList.remove("hidden");
-
-    elements.copyroomID.addEventListener("click", () =>
-      copyToClipboard(data.code),
-    );
 
     populatePlayerList(data.players);
     openWebSocketConnection(data.code, host);

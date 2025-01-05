@@ -10,79 +10,98 @@ const elements = {
 };
 
 let socket;
-let currentroomID = null;
 
 const showError = (message) => {
-  console.log("[Error] Show:", message);
   elements.errorMessage.textContent = message;
   elements.errorMessage.classList.remove("hidden");
 };
 
 const hideError = () => {
-  console.log("[Error] Hide");
   elements.errorMessage.textContent = "";
   elements.errorMessage.classList.add("hidden");
 };
 
 const populatePlayerList = (players) => {
-  console.log("[PlayerList] Populating with:", players);
-  elements.playerList.innerHTML = "";
-  Object.values(players).forEach((player) => {
-    const li = document.createElement("li");
-    li.textContent = player.Username || player.username;
-    elements.playerList.appendChild(li);
+  elements.playerList.innerHTML = ""; // Clear the list
+  players.forEach((player) => {
+    if (player.username && player.score !== undefined) {
+      const li = document.createElement("li");
+      li.textContent = `${player.username} (Score: ${player.score})`;
+      elements.playerList.appendChild(li);
+    }
   });
-  elements.numPlayersValue.textContent = Object.keys(players).length;
+  elements.numPlayersValue.textContent = players.length;
+};
+
+const handleWebSocketMessage = (event) => {
+  const message = JSON.parse(event.data);
+  switch (message.event) {
+    case "playerJoined":
+      updatePlayerList(message.data.username, message.data.score);
+      break;
+    case "playerLeft":
+      removePlayer(message.data);
+      break;
+    case "scoreUpdated":
+      updatePlayerScore(message.data.username, message.data.score);
+      break;
+    default:
+      console.warn("Unhandled WebSocket event:", message.event);
+  }
 };
 
 const openWebSocketConnection = (roomID, username) => {
-  console.log("[WebSocket] Opening for room:", roomID);
   socket = new WebSocket("ws://localhost:8080/ws");
 
   socket.onopen = () => {
-    console.log("[WebSocket] Connection established");
     socket.send(JSON.stringify({ event: "joinRoom", username, roomID }));
   };
 
-  socket.onmessage = (event) => {
-    console.log("[WebSocket] Message:", event.data);
-    try {
-      const message = JSON.parse(event.data);
-      if (
-        message.roomID === currentroomID &&
-        message.event === "playerJoined"
-      ) {
-        console.log("[WebSocket] Player joined:", message.data.username);
-        updatePlayerList(message.data.username);
-      }
-    } catch (error) {
-      console.error("[WebSocket] Parse error:", error);
-    }
-  };
+  socket.onmessage = handleWebSocketMessage;
 
   socket.onerror = (error) => {
-    console.error("[WebSocket] Error:", error);
-    showError("WebSocket error.");
+    showError("WebSocket error occurred.");
+    console.error("WebSocket error:", error);
   };
 
   socket.onclose = () => {
-    console.log("[WebSocket] Closed");
+    console.log("WebSocket connection closed.");
   };
 };
 
-const updatePlayerList = (newPlayerName) => {
-  console.log("[PlayerList] Adding:", newPlayerName);
-  const existingPlayer = Array.from(elements.playerList.children).some(
-    (li) => li.textContent === newPlayerName,
+const updatePlayerList = (username, score = 0) => {
+  const existingPlayers = Array.from(elements.playerList.children);
+  const alreadyExists = existingPlayers.some((li) =>
+    li.textContent.startsWith(username),
   );
 
-  if (!existingPlayer) {
+  if (!alreadyExists) {
     const li = document.createElement("li");
-    li.textContent = newPlayerName;
+    li.textContent = `${username} (Score: ${score})`;
     elements.playerList.appendChild(li);
     elements.numPlayersValue.textContent =
-      parseInt(elements.numPlayersValue.textContent) + 1;
+      parseInt(elements.numPlayersValue.textContent, 10) + 1;
   }
+};
+
+const removePlayer = (username) => {
+  const playerItems = Array.from(elements.playerList.children);
+  playerItems.forEach((li) => {
+    if (li.textContent.startsWith(username)) {
+      elements.playerList.removeChild(li);
+      elements.numPlayersValue.textContent =
+        parseInt(elements.numPlayersValue.textContent, 10) - 1;
+    }
+  });
+};
+
+const updatePlayerScore = (username, score) => {
+  const playerItems = Array.from(elements.playerList.children);
+  playerItems.forEach((li) => {
+    if (li.textContent.startsWith(username)) {
+      li.textContent = `${username} (Score: ${score})`;
+    }
+  });
 };
 
 const joinRoom = async () => {
@@ -94,11 +113,6 @@ const joinRoom = async () => {
 
     if (!username || username.length < 4 || username.length > 10) {
       showError("Username must be between 4 and 10 characters.");
-      return;
-    }
-
-    if (!roomID) {
-      showError("Please enter the room code.");
       return;
     }
 
@@ -114,17 +128,11 @@ const joinRoom = async () => {
     }
 
     const data = await response.json();
-    console.log("[JoinRoom] Joined:", data);
-
-    currentroomID = data.code;
-    document.getElementById("room-code-value").textContent = data.code;
-    document.getElementById("host-name-value").textContent = data.host;
+    populatePlayerList(data.players);
+    openWebSocketConnection(data.code, username);
 
     elements.joinRoomForm.classList.add("hidden");
     elements.roomID.classList.remove("hidden");
-
-    populatePlayerList(data.players);
-    openWebSocketConnection(data.code, username);
   } catch (error) {
     showError(error.message);
   }
