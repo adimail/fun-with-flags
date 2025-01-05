@@ -19,7 +19,6 @@ const elements = {
 let socket;
 
 const handleRangeInput = (event, displayElement) => {
-  console.log("[RangeInput] Value:", event.target.value);
   displayElement.textContent = event.target.value;
 };
 

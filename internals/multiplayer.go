@@ -3,17 +3,20 @@ package internals
 import (
 	"encoding/json"
 	"errors"
-	"log"
 	"math/rand"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/adimail/fun-with-flags/internals/game"
 	"github.com/gorilla/websocket"
 )
 
-var rooms = make(map[string]*game.Room)
+var (
+	rooms     = make(map[string]*game.Room)
+	roomsLock sync.Mutex
+)
 
 func generateroomID() string {
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -47,20 +50,17 @@ func createRoomHandler(w http.ResponseWriter, r *http.Request) {
 		HostUsername string `json:"hostUsername"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid JSON format"})
+		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
 		return
 	}
 
 	if err := ValidateCreateRoomRequest(&req.CreateRoomRequest); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{Error: err.Error()})
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if req.HostUsername == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{Error: "Host username is required"})
+		http.Error(w, "Host username is required", http.StatusBadRequest)
 		return
 	}
 
@@ -73,7 +73,6 @@ func createRoomHandler(w http.ResponseWriter, r *http.Request) {
 	roomID := generateroomID()
 	room := &game.Room{
 		Code:      roomID,
-		Host:      nil,
 		Players:   make(map[*websocket.Conn]*game.Player),
 		Questions: make(map[string]*game.Question),
 		Start:     false,
@@ -84,14 +83,16 @@ func createRoomHandler(w http.ResponseWriter, r *http.Request) {
 		room.Questions[strconv.Itoa(i)] = &q
 	}
 
+	roomsLock.Lock()
 	rooms[roomID] = room
+	roomsLock.Unlock()
 
 	response := map[string]interface{}{
 		"code":         room.Code,
 		"host":         req.HostUsername,
 		"players":      []game.Player{{Username: req.HostUsername, Score: 0}},
 		"start":        room.Start,
-		"timeLimit":    room.TimeLimit,
+		"timeLimit":    room.TimeLimit, // Convert seconds to minutes
 		"numQuestions": len(questions),
 	}
 
@@ -107,63 +108,49 @@ func joinRoomHandler(w http.ResponseWriter, r *http.Request) {
 
 	var req struct {
 		Username string `json:"username"`
-		RoomID   string `json:"roomID"` // Change `roomID` to `RoomID` to make it exported
+		RoomID   string `json:"roomID"`
 	}
 
-	// Parse JSON request body
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid JSON format"})
+		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
 		return
 	}
 
-	// Validate input
 	if req.Username == "" || len(req.Username) < 4 || len(req.Username) > 10 {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{Error: "Username must be between 4 and 10 characters"})
+		http.Error(w, "Username must be between 4 and 10 characters", http.StatusBadRequest)
 		return
 	}
 
 	if req.RoomID == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{Error: "Room ID is required"})
+		http.Error(w, "Room ID is required", http.StatusBadRequest)
 		return
 	}
 
-	// Check if the room exists
+	roomsLock.Lock()
 	room, exists := rooms[req.RoomID]
+	roomsLock.Unlock()
+
 	if !exists {
+		type ErrorResponse struct {
+			Error string `json:"error"`
+		}
+
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
 		json.NewEncoder(w).Encode(ErrorResponse{Error: "Room not found"})
 		return
 	}
 
-	// Print the room data when found
-	log.Println("Room found:", room)
-	log.Printf("Room Code: %s, Host: %s, Time Limit: %d, Number of Questions: %d", room.Code, room.Host, room.TimeLimit, len(room.Questions))
-
-	// Create a new player and add to the room
-	player := &game.Player{Username: req.Username, Score: 0}
-	conn := &websocket.Conn{} // Placeholder, replace with the actual WebSocket connection
-	room.Mutex.Lock()
-	room.Players[conn] = player
-	room.Mutex.Unlock()
-
-	// Prepare response
 	response := map[string]interface{}{
 		"code":         room.Code,
-		"host":         room.Host,                    // Return Host's Username
-		"players":      getSerializablePlayers(room), // Get serializable player details
-		"timeLimit":    room.TimeLimit / 60,          // Convert seconds to minutes
+		"host":         room.Host, // Ensure Host is properly set
+		"players":      getSerializablePlayers(room),
+		"timeLimit":    room.TimeLimit,
 		"numQuestions": len(room.Questions),
 	}
 
-	// Ensure proper response encoding
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		log.Println("Error encoding response:", err)
-		http.Error(w, "Error encoding response", http.StatusInternalServerError)
-	}
+	json.NewEncoder(w).Encode(response)
 }
 
 func getSerializablePlayers(room *game.Room) []map[string]interface{} {

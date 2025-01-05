@@ -4,4 +4,7 @@ import (
 	"sync"
 )
 
-var roomMutex sync.Mutex
+var (
+	rooms     = make(map[string]*Room)
+	roomMutex sync.Mutex
+)
