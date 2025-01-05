@@ -1,21 +1,30 @@
 document.getElementById("game").classList.add("hidden");
 
-document.getElementById("num-questions").addEventListener("input", function () {
-  const numQuestions = this.value;
-  document.getElementById("range-value").textContent = numQuestions;
+const elements = {
+  rangeValue: document.getElementById("range-value"),
+  numQuestions: document.getElementById("num-questions"),
+  flag: document.getElementById("flag"),
+  options: document.getElementById("options"),
+  progress: document.getElementById("progress"),
+  errorMessage: document.getElementById("error-message"),
+  game: document.getElementById("game"),
+  gameModal: document.getElementById("game-modal"),
+  finalScore: document.getElementById("final-score"),
+  questionModal: document.getElementById("question-modal"),
+  startGameBtn: document.getElementById("start-game-btn"),
+  endGame: document.getElementById("endgame"),
+};
+
+elements.numQuestions.addEventListener("input", function () {
+  elements.rangeValue.textContent = this.value;
 });
 
 async function fetchQuestions(numQuestions) {
   const response = await fetch("/api/singleplayer", {
     method: "GET",
-    headers: {
-      "X-Num-Questions": numQuestions.toString(),
-    },
+    headers: { "X-Num-Questions": numQuestions.toString() },
   });
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch questions.");
-  }
+  if (!response.ok) throw new Error("Failed to fetch questions.");
   return response.json();
 }
 
@@ -26,34 +35,36 @@ function shuffleArray(array) {
   }
 }
 
+function updateElementText(element, text) {
+  element.textContent = text;
+}
+
 function updateProgress(currentIndex, totalQuestions) {
-  const progressElement = document.getElementById("progress");
-  progressElement.textContent = `Question ${currentIndex + 1} of ${totalQuestions}`;
+  updateElementText(
+    elements.progress,
+    `Question ${currentIndex + 1} of ${totalQuestions}`,
+  );
 }
 
 function loadQuestion(question, currentIndex, totalQuestions, callback) {
-  document.getElementById("flag").src = question.flag_url;
-
+  elements.flag.src = question.flag_url;
   updateProgress(currentIndex, totalQuestions);
 
   const optionsArray = [...question.options];
   shuffleArray(optionsArray);
 
-  const optionsContainer = document.getElementById("options");
-  optionsContainer.innerHTML = "";
+  elements.options.innerHTML = optionsArray
+    .map((option) => `<button class="option">${option}</button>`)
+    .join("");
 
-  optionsArray.forEach((option) => {
-    const button = document.createElement("button");
-    button.textContent = option;
-    button.className = "option";
+  Array.from(elements.options.children).forEach((button) => {
     button.onclick = () =>
       handleAnswer(
         button,
-        option === question.answer,
+        button.textContent === question.answer,
         question.answer,
         callback,
       );
-    optionsContainer.appendChild(button);
   });
 }
 
@@ -82,27 +93,25 @@ function handleAnswer(selectedButton, isCorrect, correctAnswer, callback) {
   }, 2000);
 }
 
-function showGameOverModal(score, totalQuestions) {
-  const modal = document.getElementById("game-modal");
-  modal.classList.remove("hidden");
-  const finalScoreElement = document.getElementById("final-score");
-
-  finalScoreElement.textContent = `Your score: ${score}/${totalQuestions}`;
+function toggleVisibility(element, visible) {
+  element.classList.toggle("hidden", !visible);
 }
 
-function hideQuestionModal() {
-  const modal = document.getElementById("question-modal");
-  modal.classList.add("hidden");
+function showGameOverModal(score, totalQuestions) {
+  updateElementText(
+    elements.finalScore,
+    `Your score: ${score}/${totalQuestions}`,
+  );
+  toggleVisibility(elements.gameModal, true);
 }
 
 function showErrorMessage(message) {
-  const errorMessageElement = document.getElementById("error-message");
-  errorMessageElement.textContent = message;
-  errorMessageElement.classList.remove("hidden");
+  updateElementText(elements.errorMessage, message);
+  toggleVisibility(elements.errorMessage, true);
 }
 
 async function startGame() {
-  const numQuestions = parseInt(document.getElementById("num-questions").value);
+  const numQuestions = parseInt(elements.numQuestions.value);
 
   if (isNaN(numQuestions) || numQuestions <= 0) {
     showErrorMessage("Please enter a valid number of questions.");
@@ -110,21 +119,18 @@ async function startGame() {
   }
 
   try {
-    hideQuestionModal();
-    document.getElementById("game").classList.add("hidden");
+    toggleVisibility(elements.questionModal, false);
+    toggleVisibility(elements.game, false);
 
     const questions = await fetchQuestions(numQuestions);
-    document.getElementById("game").classList.remove("hidden");
-    document.getElementById("game").classList.remove("hidden");
+    toggleVisibility(elements.game, true);
 
-    let currentIndex = 0;
-    let score = 0;
+    let currentIndex = 0,
+      score = 0;
 
     function nextQuestion(correct) {
       if (correct) score++;
-      console.log(`Current Score: ${score}`);
-      currentIndex++;
-      if (currentIndex < questions.length) {
+      if (++currentIndex < questions.length) {
         loadQuestion(
           questions[currentIndex],
           currentIndex,
@@ -143,12 +149,10 @@ async function startGame() {
       nextQuestion,
     );
 
-    document.getElementById("endgame").onclick = () => {
-      showGameOverModal(score, questions.length);
-    };
-  } catch (error) {
+    elements.endGame.onclick = () => showGameOverModal(score, questions.length);
+  } catch {
     showErrorMessage("An error occurred while fetching the game data.");
   }
 }
 
-document.getElementById("start-game-btn").onclick = startGame;
+elements.startGameBtn.onclick = startGame;
