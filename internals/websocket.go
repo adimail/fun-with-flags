@@ -126,10 +126,14 @@ func broadcastToRoom(room *game.Room, message interface{}) {
 	room.Mutex.Lock()
 	defer room.Mutex.Unlock()
 
-	for conn := range room.Players {
+	for conn, player := range room.Players {
+		if conn == nil {
+			continue
+		}
+
 		if err := conn.WriteJSON(message); err != nil {
-			log.Printf("Error broadcasting message: %v", err)
-			conn.Close() // Close problematic connection
+			log.Printf("Error broadcasting message to player %s: %v", player.Username, err)
+			conn.Close()
 			delete(room.Players, conn)
 		}
 	}

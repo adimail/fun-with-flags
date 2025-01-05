@@ -3,6 +3,7 @@ package internals
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -80,6 +81,9 @@ func createRoomHandler(w http.ResponseWriter, r *http.Request) {
 		TimeLimit: req.TimeLimit,
 	}
 
+	hostPlayer := &game.Player{Username: req.HostUsername, Score: 0}
+	room.Players[nil] = hostPlayer
+
 	for i, q := range questions {
 		room.Questions[strconv.Itoa(i)] = &q
 	}
@@ -91,7 +95,7 @@ func createRoomHandler(w http.ResponseWriter, r *http.Request) {
 	response := map[string]interface{}{
 		"code":         room.Code,
 		"host":         room.Hostname,
-		"players":      []game.Player{{Username: req.HostUsername, Score: 0}},
+		"players":      getSerializablePlayers(room),
 		"start":        room.Start,
 		"timeLimit":    room.TimeLimit,
 		"numQuestions": len(questions),
@@ -113,17 +117,23 @@ func joinRoomHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid JSON format"})
 		return
 	}
 
 	if req.Username == "" || len(req.Username) < 4 || len(req.Username) > 10 {
-		http.Error(w, "Username must be between 4 and 10 characters", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Username must be between 4 and 10 characters"})
 		return
 	}
 
 	if req.RoomID == "" {
-		http.Error(w, "Room ID is required", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Room ID is required"})
 		return
 	}
 
@@ -132,15 +142,25 @@ func joinRoomHandler(w http.ResponseWriter, r *http.Request) {
 	roomsLock.Unlock()
 
 	if !exists {
-		type ErrorResponse struct {
-			Error string `json:"error"`
-		}
-
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
 		json.NewEncoder(w).Encode(ErrorResponse{Error: "Room not found"})
 		return
 	}
+
+	for _, player := range room.Players {
+		if player != nil && player.Username == req.Username {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(ErrorResponse{
+				Error: fmt.Sprintf("Please choose another username, player '%s' exists in the room '%s'", req.Username, req.RoomID),
+			})
+			return
+		}
+	}
+
+	player := &game.Player{Username: req.Username, Score: 0}
+	room.Players[nil] = player
 
 	response := map[string]interface{}{
 		"code":         room.Code,
@@ -160,11 +180,12 @@ func getSerializablePlayers(room *game.Room) []map[string]interface{} {
 	defer room.Mutex.Unlock()
 
 	for _, playerConn := range room.Players {
-		// Assuming we have access to player details via `*game.Player`
-		players = append(players, map[string]interface{}{
-			"username": playerConn.Username,
-			"score":    playerConn.Score,
-		})
+		if playerConn != nil {
+			players = append(players, map[string]interface{}{
+				"username": playerConn.Username,
+				"score":    playerConn.Score,
+			})
+		}
 	}
 	return players
 }

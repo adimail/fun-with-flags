@@ -135,7 +135,8 @@ const joinRoom = async () => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || "Unknown error.");
+      showError(errorData.error || "Unknown error.");
+      return;
     }
 
     const data = await response.json();
