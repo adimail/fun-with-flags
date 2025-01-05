@@ -62,6 +62,10 @@ async function createRoom() {
       showError("Username must be at least 4 characters long.");
       return;
     }
+    if (host.length > 10) {
+      showError("Username must be less than 10 characters long.");
+      return;
+    }
 
     // Validate other inputs
     if (
@@ -102,9 +106,6 @@ async function createRoom() {
     document.getElementById("num-players-value").textContent = Object.keys(
       data.players,
     ).length;
-    document.getElementById("game-started-value").textContent = data.start
-      ? "Yes"
-      : "No";
 
     elements.createRoomForm.classList.add("hidden");
     elements.roomCode.classList.remove("hidden");

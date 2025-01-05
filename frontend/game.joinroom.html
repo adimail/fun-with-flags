@@ -3,14 +3,95 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="/static/css/style.css" />
-    <script src="https://unpkg.com/htmx.org"></script>
-    <title>Game</title>
+    <title>Join a Room</title>
+    <link rel="stylesheet" href="/static/css/game.css" />
+    <link rel="stylesheet" href="/static/css/root.css" />
   </head>
   <body>
-    <main>
-      <h1>Building...</h1>
+    <h1>Join a Game Room</h1>
+
+    <div id="question-modal" class="modal">
+      <div class="modal-content">
+        <h2>Join game room</h2>
+        <div>
+          <input
+            type="text"
+            id="username"
+            placeholder="Enter your name..."
+            max="30"
+          />
+        </div>
+        <div>
+          <input
+            type="text"
+            id="roomcode"
+            placeholder="Enter Room Code"
+            max="30"
+          />
+        </div>
+        <div style="display: flex; gap: 10px">
+          <button id="join-room-btn" class="action-btn">Join room</button>
+          <button class="action-btn" onclick="toggleTheme()">
+            Toggle Theme
+          </button>
+        </div>
+
+        <p id="error-message" class="error-message hidden"></p>
+      </div>
+    </div>
+
+    <main id="room-code" class="hidden waiting-room">
+      <table>
+        <thead>
+          <tr>
+            <th>Room Info</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Room Code</td>
+            <td>
+              <span id="room-code-value"></span>
+              <button id="copy-room-code" title="Copy to clipboard">📋</button>
+            </td>
+          </tr>
+          <tr>
+            <td>Host Name</td>
+            <td id="host-name-value"></td>
+          </tr>
+          <tr>
+            <td>Number of Players</td>
+            <td id="num-players-value"></td>
+          </tr>
+          <tr>
+            <td>Number of Questions</td>
+            <td id="num-questions-value"></td>
+          </tr>
+          <tr>
+            <td>Time Limit (mins)</td>
+            <td id="time-limit-value"></td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Share this code with other players to join the room.</p>
+      <section id="player-list-section">
+        <h3>Players in the Room</h3>
+        <ul id="player-list">
+          <!-- Dynamically populated list of players -->
+        </ul>
+      </section>
+      <button onclick="window.location.href='/joinroom'" class="action-btn">
+        Start Game
+      </button>
     </main>
-    <script src="/static/js/scripts.js"></script>
+
+    <footer>
+      <a href="/">Home</a>
+      <button onclick="toggleTheme()">Toggle Theme</button>
+    </footer>
+
+    <script src="/static/js/join-room.js"></script>
+    <script defer src="/static/js/theme.js"></script>
   </body>
 </html>
