@@ -44,6 +44,7 @@ func Router() *mux.Router {
 	// game state
 	r.HandleFunc("/api/singleplayer", SinglePlayerHandler).Methods("GET")
 	r.HandleFunc("/api/createroom", createRoomHandler).Methods("POST")
+	r.HandleFunc("/api/joinroom", joinRoomHandler).Methods("POST")
 
 	//
 	// Error handlers

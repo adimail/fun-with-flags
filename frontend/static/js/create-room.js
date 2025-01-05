@@ -3,16 +3,18 @@ const elements = {
   timeLimit: document.getElementById("time-limit"),
   createRoomBtn: document.getElementById("create-room-btn"),
   errorMessage: document.getElementById("error-message"),
-  roomCode: document.getElementById("room-code"),
+  roomID: document.getElementById("room-code"),
   createRoomForm: document.getElementById("question-modal"),
-  roomCodeValue: document.getElementById("room-code-value"),
+  roomIDValue: document.getElementById("room-code-value"),
   numQuestionsValue: document.getElementById("num-questions-value"),
   timeLimitValue: document.getElementById("time-limit-value"),
   rangeValueQ: document.getElementById("range-value-q"),
   rangeValueT: document.getElementById("range-value-t"),
-  copyRoomCode: document.getElementById("copy-room-code"),
+  copyroomID: document.getElementById("copy-room-code"),
   hostUsername: document.getElementById("host-username"),
 };
+
+let socket;
 
 function handleRangeInput(event, displayElement) {
   displayElement.textContent = event.target.value;
@@ -26,9 +28,9 @@ elements.timeLimit.addEventListener("input", (e) =>
   handleRangeInput(e, elements.rangeValueT),
 );
 
-async function copyRoomCode(roomCode) {
+async function copyroomID(roomID) {
   try {
-    await navigator.clipboard.writeText(roomCode);
+    await navigator.clipboard.writeText(roomID);
     alert("Room code copied to clipboard!");
   } catch (err) {
     console.error("Could not copy room code:", err);
@@ -99,7 +101,7 @@ async function createRoom() {
 
     const data = await response.json();
 
-    elements.roomCodeValue.textContent = data.code;
+    elements.roomIDValue.textContent = data.code;
     elements.numQuestionsValue.textContent = data.numQuestions;
     elements.timeLimitValue.textContent = data.timeLimit / 60;
     document.getElementById("host-name-value").textContent = data.host;
@@ -108,13 +110,13 @@ async function createRoom() {
     ).length;
 
     elements.createRoomForm.classList.add("hidden");
-    elements.roomCode.classList.remove("hidden");
+    elements.roomID.classList.remove("hidden");
 
-    elements.copyRoomCode.addEventListener("click", () =>
-      copyRoomCode(data.code),
-    );
+    elements.copyroomID.addEventListener("click", () => copyroomID(data.code));
 
     populatePlayerList(data.players);
+
+    openWebSocketConnection(data.code, host);
   } catch (error) {
     showError(error.message);
   }
@@ -126,10 +128,96 @@ function populatePlayerList(players) {
 
   players.forEach((player) => {
     const li = document.createElement("li");
-
-    li.textContent = player.Username;
+    li.textContent = player.Username || player.username;
     playerList.appendChild(li);
   });
+
+  document.getElementById("num-players-value").textContent = players.length;
+}
+
+let currentroomID = null;
+
+function openWebSocketConnection(roomID, username) {
+  currentroomID = roomID;
+  socket = new WebSocket("ws://localhost:8080/ws");
+
+  socket.onopen = () => {
+    console.log("[WebSocket] Connection established");
+
+    const initialMessage = {
+      username: username,
+      roomID: roomID,
+    };
+    console.log("[WebSocket] Sending initial message:", initialMessage);
+    socket.send(JSON.stringify(initialMessage));
+  };
+
+  socket.onmessage = (event) => {
+    console.log("[WebSocket] Message received:", event.data);
+
+    try {
+      const message = JSON.parse(event.data);
+      console.log("[WebSocket] Parsed message:", message);
+
+      if (
+        message.event === "playerJoined" &&
+        message.roomID === currentroomID
+      ) {
+        console.log(
+          "[WebSocket] Relevant playerJoined event for room:",
+          currentroomID,
+        );
+        updatePlayerList(message.data.username);
+      } else {
+        console.warn("[WebSocket] Irrelevant message for this room:", message);
+      }
+    } catch (error) {
+      console.error("[WebSocket] Error parsing message:", event.data, error);
+    }
+  };
+
+  socket.onerror = (error) => {
+    console.error("[WebSocket] Error:", error);
+    showError("WebSocket connection error. Please try again.");
+  };
+
+  socket.onclose = () => {
+    console.log("[WebSocket] Connection closed");
+    currentroomID = null;
+  };
+}
+
+function updatePlayerList(newPlayerName) {
+  console.log("[UpdatePlayerList] Updating player list with:", newPlayerName);
+
+  const playerList = document.getElementById("player-list");
+
+  const existingPlayer = Array.from(playerList.children).some(
+    (li) => li.textContent === newPlayerName,
+  );
+
+  if (!existingPlayer) {
+    console.log(
+      "[UpdatePlayerList] Player not in the list, adding:",
+      newPlayerName,
+    );
+    const li = document.createElement("li");
+    li.textContent = newPlayerName;
+    playerList.appendChild(li);
+
+    const playerCountElement = document.getElementById("num-players-value");
+    playerCountElement.textContent =
+      parseInt(playerCountElement.textContent) + 1;
+    console.log(
+      "[UpdatePlayerList] Player count updated to:",
+      playerCountElement.textContent,
+    );
+  } else {
+    console.log(
+      "[UpdatePlayerList] Player already exists in the list:",
+      newPlayerName,
+    );
+  }
 }
 
 elements.createRoomBtn.addEventListener("click", createRoom);

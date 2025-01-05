@@ -15,6 +15,7 @@ type Question struct {
 type Player struct {
 	Username string
 	Score    int
+	Conn     *websocket.Conn
 }
 
 type GameState struct {
@@ -25,7 +26,7 @@ type GameState struct {
 type Room struct {
 	Code      string
 	Host      *websocket.Conn
-	Players   map[*websocket.Conn]bool
+	Players   map[*websocket.Conn]*Player
 	Questions map[string]*Question
 	Start     bool
 	TimeLimit int // in seconds
