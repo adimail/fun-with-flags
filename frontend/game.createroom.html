@@ -3,14 +3,83 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="/static/css/style.css" />
-    <script src="https://unpkg.com/htmx.org"></script>
-    <title>Game</title>
+    <title>Create a Room</title>
+    <link rel="stylesheet" href="/static/css/game.css" />
+    <link rel="stylesheet" href="/static/css/root.css" />
   </head>
   <body>
-    <main>
-      <h1>Building...</h1>
+    <h1>Create a Game Room</h1>
+
+    <div id="question-modal" class="modal">
+      <div class="modal-content">
+        <h2>Create game room</h2>
+        <div>
+          <input
+            type="text"
+            id="host-username"
+            placeholder="Enter your name..."
+            max="30"
+          />
+        </div>
+        <div>
+          <label for="num-questions">Number of questions: </label>
+          <span id="range-value-q">10</span>
+          <input type="range" id="num-questions" min="10" max="25" value="10" />
+        </div>
+        <div>
+          <label for="time-limit">Time limit (mins): </label>
+          <span id="range-value-t">5</span>
+          <input type="range" id="time-limit" min="3" max="10" value="5" />
+        </div>
+        <div style="display: flex; gap: 10px">
+          <button id="create-room-btn" class="action-btn">Create room</button>
+          <button class="action-btn" onclick="toggleTheme()">
+            Toggle Theme
+          </button>
+        </div>
+
+        <p id="error-message" class="error-message hidden"></p>
+      </div>
+    </div>
+
+    <main id="room-code" class="hidden">
+      <table>
+        <thead>
+          <tr>
+            <th>Room Info</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Room Code</td>
+            <td>
+              <span id="room-code-value"></span>
+              <button id="copy-room-code" title="Copy to clipboard">📋</button>
+            </td>
+          </tr>
+          <tr>
+            <td>Number of Questions</td>
+            <td id="num-questions-value"></td>
+          </tr>
+          <tr>
+            <td>Time Limit (mins)</td>
+            <td id="time-limit-value"></td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Share this code with other players to join the room.</p>
+      <button onclick="window.location.href='/joinroom'" class="action-btn">
+        Join Room
+      </button>
     </main>
-    <script src="/static/js/scripts.js"></script>
+
+    <footer>
+      <a href="/">Home</a>
+      <button onclick="toggleTheme()">Toggle Theme</button>
+    </footer>
+
+    <script src="/static/js/create-room.js"></script>
+    <script defer src="/static/js/theme.js"></script>
   </body>
 </html>

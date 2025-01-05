@@ -69,6 +69,15 @@ h1 {
   }
 }
 
+input[type="text"] {
+  width: 90%;
+  padding: 10px;
+  border-radius: 10px;
+  font-size: 24px;
+  margin-bottom: 30px;
+  border: 2px solid var(--primary-color);
+}
+
 input[type="range"] {
   -webkit-appearance: none;
   width: 100%;
@@ -100,24 +109,6 @@ input[type="range"]::-moz-range-thumb {
   border: 2px solid var(--primary-color);
   cursor: pointer;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-#start-game-btn {
-  background-color: var(--primary-color);
-  color: white;
-  padding: 10px 20px;
-  font-size: 1.2em;
-  border: none;
-  border-radius: var(--border-radius);
-  cursor: pointer;
-  transition:
-    background-color var(--transition-duration),
-    transform var(--transition-duration);
-}
-
-#start-game-btn:hover {
-  background-color: var(--hover-color);
-  transform: translateY(-2px);
 }
 
 .toggle-theme {
@@ -170,6 +161,7 @@ h1 {
 .flag {
   height: 250px;
   width: auto;
+  max-width: 90vw;
   margin: 30px auto;
   border: 2px solid var(--primary-color);
   border-radius: var(--border-radius);
@@ -258,6 +250,8 @@ footer button:hover {
   text-align: center;
   width: 500px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  display: grid;
+  gap: 20px;
 }
 
 .modal-content h2 {
@@ -265,25 +259,18 @@ footer button:hover {
   color: var(--primary-color);
 }
 
-.modal-actions {
-  margin-top: 20px;
-  display: flex;
-  justify-content: space-around;
-  gap: 20px;
-}
-
-.modal-actions a {
+.modal a {
   text-decoration: none;
   color: var(--footer-link-color);
   font-size: 1em;
   padding: 10px 20px;
   border-radius: var(--border-radius);
-  background-color: var(--secondary-color);
+  background-color: var(--primary-color);
   border: 1px solid var(--primary-color);
   transition: background-color var(--transition-duration);
 }
 
-.modal-actions a:hover {
+.modal a:hover {
   background-color: var(--hover-color);
   color: white;
 }
@@ -293,22 +280,25 @@ main {
   justify-items: center;
   align-items: center;
   padding-top: 100px;
+  padding-bottom: 100px;
 }
 
-#start-game-btn {
+.action-btn {
   background-color: var(--primary-color);
   color: white;
   padding: 10px 20px;
   font-size: 1.2em;
   border: none;
+  max-width: 300px;
   border-radius: var(--border-radius);
   cursor: pointer;
+  width: 100%;
   transition:
     background-color var(--transition-duration),
     transform var(--transition-duration);
 }
 
-#start-game-btn:hover {
+.action-btn:hover {
   background-color: var(--hover-color);
 }
 
@@ -326,4 +316,62 @@ main {
 
 .hidden {
   display: none;
+}
+
+@media (max-width: 768px) {
+  body {
+    font-size: 14px;
+  }
+
+  main {
+    padding-top: 50px;
+    padding-bottom: 50px;
+  }
+
+  h1 {
+    font-size: 1.5em;
+    padding: 10px;
+  }
+
+  .flag {
+    height: auto;
+    margin: 20px auto;
+  }
+
+  .options {
+    margin-top: 15px;
+  }
+
+  .option {
+    padding: 12px 20px;
+    font-size: 1.3em;
+  }
+
+  footer {
+    padding: 15px;
+  }
+
+  footer a,
+  footer button {
+    font-size: 14px;
+  }
+
+  .modal-content {
+    margin: 20px;
+    width: 90%;
+    padding: 20px;
+  }
+
+  .action-btn {
+    font-size: 1em;
+    padding: 8px 16px;
+  }
+
+  #progress {
+    font-size: 1em;
+  }
+
+  #error-message {
+    font-size: 0.85em;
+  }
 }

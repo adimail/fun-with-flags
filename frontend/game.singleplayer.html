@@ -13,9 +13,18 @@
     <div id="question-modal" class="modal">
       <div class="modal-content">
         <h2>Select Number of Questions</h2>
+        <label for="num-questions"
+          >Number of questions: <span id="range-value">10</span>
+        </label>
+
         <input type="range" id="num-questions" min="10" max="25" value="10" />
-        <p id="range-value">10</p>
-        <button id="start-game-btn">Start Game</button>
+        <div style="display: flex; gap: 10px">
+          <button id="start-game-btn" class="action-btn">Start Game</button>
+          <button class="action-btn" onclick="toggleTheme()">
+            Toggle Theme
+          </button>
+        </div>
+
         <p id="error-message" class="error-message hidden"></p>
       </div>
     </div>
@@ -37,7 +46,14 @@
       <button onclick="toggleTheme()">Toggle Theme</button>
     </footer>
 
-    <script></script>
+    <div id="game-modal" class="modal hidden">
+      <div class="modal-content">
+        <h2>Game Over</h2>
+        <p id="final-score"></p>
+        <a href="/play">Play Again</a>
+        <a href="/">Go Home</a>
+      </div>
+    </div>
 
     <script defer type="module" src="/static/js/game.singleplayer.js"></script>
     <script defer src="/static/js/theme.js"></script>

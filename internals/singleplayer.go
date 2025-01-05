@@ -3,45 +3,13 @@ package internals
 import (
 	"encoding/csv"
 	"encoding/json"
-	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
-	"time"
+
+	"github.com/adimail/fun-with-flags/internals/game"
 )
-
-type Question struct {
-	FlagURL string   `json:"flag_url"`
-	Options []string `json:"options"`
-	Answer  string   `json:"answer"`
-}
-
-func newRandomGenerator() *rand.Rand {
-	return rand.New(rand.NewSource(time.Now().UnixNano()))
-}
-
-func shuffleOptions(options []string, rng *rand.Rand) {
-	rng.Shuffle(len(options), func(i, j int) {
-		options[i], options[j] = options[j], options[i]
-	})
-}
-
-func shuffleCountries(rows [][]string, rng *rand.Rand) {
-	rng.Shuffle(len(rows), func(i, j int) {
-		rows[i], rows[j] = rows[j], rows[i]
-	})
-}
-
-func selectRandomCountries(rows [][]string, count int, rng *rand.Rand) [][]string {
-	rng.Shuffle(len(rows), func(i, j int) {
-		rows[i], rows[j] = rows[j], rows[i]
-	})
-	if len(rows) < count {
-		return rows
-	}
-	return rows[:count]
-}
 
 func SinglePlayerHandler(w http.ResponseWriter, r *http.Request) {
 	numQuestionsStr := r.Header.Get("X-Num-Questions")
@@ -69,7 +37,7 @@ func SinglePlayerHandler(w http.ResponseWriter, r *http.Request) {
 
 	selectedCountries := selectRandomCountries(rows, numQuestions, rng)
 
-	var questions []Question
+	var questions []game.Question
 	for i, row := range selectedCountries {
 		countryName := row[0]
 		countryCode := row[1]
@@ -82,7 +50,7 @@ func SinglePlayerHandler(w http.ResponseWriter, r *http.Request) {
 
 		shuffleOptions(options, rng)
 
-		questions = append(questions, Question{
+		questions = append(questions, game.Question{
 			FlagURL: flagURL,
 			Options: options,
 			Answer:  countryName,

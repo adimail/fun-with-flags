@@ -1,28 +1,26 @@
 package game
 
 import (
+	"fmt"
+	"math/rand"
+	"net/http"
 	"sync"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
-type Room struct {
-	ID       string
-	Players  map[string]*Player
-	Duration time.Duration
-	GameType string // "singleplayer" or "multiplayer"
-	mu       sync.Mutex
-}
-
-func NewRoom(id string, duration time.Duration) *Room {
-	return &Room{
-		ID:       id,
-		Players:  make(map[string]*Player),
-		Duration: duration,
+var (
+	rooms     = make(map[string]*Room)
+	roomMutex sync.Mutex
+	upgrader  = websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool {
+			return true
+		},
 	}
-}
+)
 
-func (r *Room) AddPlayer(player *Player) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.Players[player.ID] = player
+func generateRoomCode() string {
+	rand.Seed(time.Now().UnixNano())
+	return fmt.Sprintf("%03d", rand.Intn(1000))
 }

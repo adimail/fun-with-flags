@@ -1,4 +1,5 @@
 document.getElementById("game").classList.add("hidden");
+
 document.getElementById("num-questions").addEventListener("input", function () {
   const numQuestions = this.value;
   document.getElementById("range-value").textContent = numQuestions;
@@ -26,7 +27,7 @@ function shuffleArray(array) {
 }
 
 function updateProgress(currentIndex, totalQuestions) {
-  const progressElement = document.getElementById("progress");
+  const progressElement = document.getElementById("progrehttp://localhost:8080/createroomhttp://localhost:8080/createroomss");
   progressElement.textContent = `Question ${currentIndex + 1} of ${totalQuestions}`;
 }
 
@@ -83,10 +84,10 @@ function handleAnswer(selectedButton, isCorrect, correctAnswer, callback) {
 
 function showGameOverModal(score, totalQuestions) {
   const modal = document.getElementById("game-modal");
+  modal.classList.remove("hidden");
   const finalScoreElement = document.getElementById("final-score");
 
   finalScoreElement.textContent = `Your score: ${score}/${totalQuestions}`;
-  modal.classList.remove("hidden");
 }
 
 function hideQuestionModal() {

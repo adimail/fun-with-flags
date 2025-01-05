@@ -28,9 +28,3 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.dataset.theme = "light";
   }
 });
-
-document
-  .getElementById("num-questions")
-  .addEventListener("input", function (e) {
-    document.getElementById("range-value").textContent = e.target.value;
-  });
