@@ -8,7 +8,7 @@ import (
 
 func Router() *mux.Router {
 	r := mux.NewRouter()
-	r.Use(loggingMiddleware)
+	// r.Use(loggingMiddleware)
 
 	// Serve static files under "/static" URL path
 	fs := http.FileServer(http.Dir("./frontend/static"))
@@ -26,6 +26,11 @@ func Router() *mux.Router {
 		http.ServeFile(w, r, "./frontend/index.html")
 	})
 
+	// "/"
+	r.HandleFunc("/admin", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./frontend/admin.html")
+	})
+
 	// "/joinroom"
 	r.HandleFunc("/joinroom", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./frontend/game.joinroom.html")
@@ -34,6 +39,11 @@ func Router() *mux.Router {
 	// "/createroom"
 	r.HandleFunc("/createroom", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./frontend/game.createroom.html")
+	})
+
+	// "/room?id={id}"
+	r.HandleFunc("/room", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./frontend/game.room.html")
 	})
 
 	// "/play" Single player game
@@ -45,6 +55,8 @@ func Router() *mux.Router {
 	r.HandleFunc("/api/singleplayer", SinglePlayerHandler).Methods("GET")
 	r.HandleFunc("/api/createroom", createRoomHandler).Methods("POST")
 	r.HandleFunc("/api/joinroom", joinRoomHandler).Methods("POST")
+	r.HandleFunc("/api/room/{id}", getRoomHandler).Methods("GET")
+	r.HandleFunc("/api/rooms", adminHandler).Methods("GET")
 
 	//
 	// Error handlers

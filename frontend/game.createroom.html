@@ -33,6 +33,7 @@
         </div>
         <div style="display: flex; gap: 10px">
           <button id="create-room-btn" class="action-btn">Create room</button>
+          <a href="/joinroom" class="action-btn">Join Room</a>
           <button class="action-btn" onclick="toggleTheme()">
             Toggle Theme
           </button>
@@ -41,52 +42,6 @@
         <p id="error-message" class="error-message hidden"></p>
       </div>
     </div>
-
-    <main id="room-code" class="hidden waiting-room">
-      <table>
-        <thead>
-          <tr>
-            <th>Room Info</th>
-            <th>Details</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Room Code</td>
-            <td>
-              <span id="room-code-value"></span>
-              <button id="copy-room-code" title="Copy to clipboard">📋</button>
-            </td>
-          </tr>
-          <tr>
-            <td>Host Name</td>
-            <td id="host-name-value"></td>
-          </tr>
-          <tr>
-            <td>Number of Players</td>
-            <td id="num-players-value"></td>
-          </tr>
-          <tr>
-            <td>Number of Questions</td>
-            <td id="num-questions-value"></td>
-          </tr>
-          <tr>
-            <td>Time Limit (mins)</td>
-            <td id="time-limit-value"></td>
-          </tr>
-        </tbody>
-      </table>
-      <p>Share this code with other players to join the room.</p>
-      <section id="player-list-section">
-        <h3>Players in the Room</h3>
-        <ul id="player-list">
-          <!-- Dynamically populated list of players -->
-        </ul>
-      </section>
-      <button onclick="window.location.href='/joinroom'" class="action-btn">
-        Start Game
-      </button>
-    </main>
 
     <footer>
       <a href="/">Home</a>

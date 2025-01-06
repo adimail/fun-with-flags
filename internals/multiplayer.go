@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/adimail/fun-with-flags/internals/game"
+	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 )
 
@@ -172,6 +173,72 @@ func joinRoomHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+}
+
+func getRoomHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	roomID := vars["id"]
+
+	roomsLock.Lock()
+	room, exists := rooms[roomID]
+	roomsLock.Unlock()
+
+	if !exists {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Room not found"})
+		return
+	}
+
+	response := map[string]interface{}{
+		"code":         room.Code,
+		"host":         room.Hostname,
+		"players":      getSerializablePlayers(room),
+		"timeLimit":    room.TimeLimit,
+		"numQuestions": len(room.Questions),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func adminHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Method not allowed"})
+		return
+	}
+
+	roomsLock.Lock()
+	defer roomsLock.Unlock()
+
+	if len(rooms) == 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "No room found"})
+		return
+	}
+
+	// Create a response structure to hold all room details
+	var allRooms []map[string]interface{}
+	for _, room := range rooms {
+		roomDetails := map[string]interface{}{
+			"code":         room.Code,
+			"host":         room.Hostname,
+			"timeLimit":    room.TimeLimit,
+			"numQuestions": len(room.Questions),
+			"gameStarted":  room.Start,
+			"players":      getSerializablePlayers(room),
+		}
+		allRooms = append(allRooms, roomDetails)
+	}
+
+	// Respond with the JSON of all rooms
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"rooms": allRooms,
+	})
 }
 
 func getSerializablePlayers(room *game.Room) []map[string]interface{} {
