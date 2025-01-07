@@ -49,7 +49,7 @@ func SinglePlayerHandler(w http.ResponseWriter, r *http.Request) {
 			Answer:  countryName,
 		}
 
-		if gameType == "map" {
+		if gameType == "MAP" {
 			latitude, errLat := strconv.ParseFloat(row[2], 64)
 			longitude, errLon := strconv.ParseFloat(row[3], 64)
 			if errLat != nil || errLon != nil {

@@ -35,7 +35,7 @@ main {
   display: grid;
   justify-items: center;
   align-items: center;
-  padding-top: 100px;
+  padding-top: 80px;
   padding-bottom: 100px;
 }
 
@@ -97,6 +97,17 @@ select:hover {
   color: white;
 }
 
+#map {
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  height: 75vh;
+  border-radius: 20px;
+  overflow: hidden;
+  background-color: darkslategrey;
+  border: 1px solid black;
+}
+
 /* Buttons and Inputs */
 .action-btn,
 .action-btn a {
@@ -149,6 +160,7 @@ input[type="range"] {
 
 input[type="range"] {
   -webkit-appearance: none;
+  appearance: none;
   height: 8px;
   padding: 3px;
   border-radius: 5px;
@@ -226,6 +238,15 @@ input[type="range"]::-moz-range-thumb {
   border: 2px solid var(--primary-color);
   border-radius: var(--border-radius);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.map-flag {
+  position: fixed;
+  bottom: 40px;
+  left: 10px;
+  z-index: 999;
+  max-width: 200px;
+  height: fit-content;
 }
 
 .options {
@@ -348,6 +369,13 @@ input[type="range"]::-moz-range-thumb {
   .flag {
     height: auto;
     margin: 20px auto;
+  }
+
+  .map-flag {
+    width: 40vw;
+    top: 50px;
+    left: 50%;
+    transform: translateX(-50%);
   }
 
   .options {

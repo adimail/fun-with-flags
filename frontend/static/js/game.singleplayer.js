@@ -12,7 +12,6 @@ const elements = {
   finalScore: document.getElementById("final-score"),
   questionModal: document.getElementById("question-modal"),
   startGameBtn: document.getElementById("start-game-btn"),
-  endGame: document.getElementById("endgame"),
   gameMCQ: document.getElementById("game-mcq"),
   gameMap: document.getElementById("game-map"),
   flagMap: document.getElementById("flag-map"),
@@ -23,34 +22,76 @@ elements.numQuestions.addEventListener("input", function () {
   elements.rangeValue.textContent = this.value;
 });
 
-async function fetchQuestions(numQuestions, gameType) {
-  const response = await fetch("/api/singleplayer", {
-    method: "GET",
-    headers: {
-      "X-Num-Questions": numQuestions.toString(),
-      "game-type": gameType,
-    },
+let map;
+let vectorSource;
+let markerAddingDisabled = false;
+
+function loadMapCSSAndJS(callback) {
+  const cssLink = document.createElement("link");
+  cssLink.rel = "stylesheet";
+  cssLink.href = "https://openlayers.org/en/v4.6.5/css/ol.css";
+  document.head.appendChild(cssLink);
+
+  const jsScript = document.createElement("script");
+  jsScript.src = "https://openlayers.org/en/v4.6.5/build/ol.js";
+  jsScript.onload = callback;
+  document.head.appendChild(jsScript);
+}
+
+function initializeMap() {
+  vectorSource = new ol.source.Vector();
+  const vectorLayer = new ol.layer.Vector({
+    source: vectorSource,
+    style: new ol.style.Style({
+      image: new ol.style.Circle({
+        radius: 6,
+        fill: new ol.style.Fill({ color: "red" }),
+      }),
+    }),
   });
-  if (!response.ok) throw new Error("Failed to fetch questions.");
-  return response.json();
-}
 
-function shuffleArray(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-}
-
-function updateElementText(element, text) {
-  element.textContent = text;
-}
-
-function updateProgress(currentIndex, totalQuestions) {
-  updateElementText(
-    elements.progress,
-    `Question ${currentIndex + 1} of ${totalQuestions}`,
+  var extent = ol.proj.transformExtent(
+    [-180, -85, 180, 85],
+    "EPSG:4326",
+    "EPSG:3857",
   );
+
+  map = new ol.Map({
+    target: "map",
+    layers: [
+      new ol.layer.Tile({
+        source: new ol.source.OSM(),
+      }),
+      vectorLayer,
+    ],
+    view: new ol.View({
+      center: ol.proj.fromLonLat([0, 0]),
+      zoom: 2,
+      minZoom: 2,
+      maxZoom: 2,
+      extent: extent,
+    }),
+  });
+}
+
+function addMarker(coords) {
+  const marker = new ol.Feature({
+    geometry: new ol.geom.Point(coords),
+  });
+  vectorSource.addFeature(marker);
+}
+
+function clearMarkers() {
+  vectorSource.clear();
+}
+
+function validateMapSelection(userCoords, correctCoords) {
+  const tolerance = 200000;
+  const distance = ol.sphere.getDistance(
+    ol.proj.toLonLat(userCoords),
+    ol.proj.toLonLat(correctCoords),
+  );
+  return distance <= tolerance;
 }
 
 function loadQuestion(
@@ -89,23 +130,24 @@ function loadQuestion(
 
     elements.flagMap.src = question.flag_url;
 
-    elements.mapContainer.onclick = (event) => {
-      const userPoint = { x: event.offsetX, y: event.offsetY };
-      const correctPoint = question.coordinates;
+    clearMarkers();
 
-      const isCorrect = validateMapSelection(userPoint, correctPoint);
-      handleMapAnswer(isCorrect, question.coordinates, callback);
-    };
+    map.once("click", (event) => {
+      if (markerAddingDisabled) return;
+
+      const userCoords = event.coordinate;
+      const correctCoords = ol.proj.fromLonLat([
+        question.coordinates.lon,
+        question.coordinates.lat,
+      ]);
+
+      const isCorrect = validateMapSelection(userCoords, correctCoords);
+
+      addMarker(userCoords);
+
+      handleMapAnswer(isCorrect, correctCoords, callback);
+    });
   }
-}
-
-function validateMapSelection(userPoint, correctPoint) {
-  const tolerance = 50;
-  const distance = Math.sqrt(
-    Math.pow(userPoint.x - correctPoint.x, 2) +
-      Math.pow(userPoint.y - correctPoint.y, 2),
-  );
-  return distance <= tolerance;
 }
 
 function handleAnswer(selectedButton, isCorrect, correctAnswer, callback) {
@@ -133,32 +175,55 @@ function handleAnswer(selectedButton, isCorrect, correctAnswer, callback) {
   }, 2000);
 }
 
-function handleMapAnswer(isCorrect, correctPoint, callback) {
+function handleMapAnswer(isCorrect, correctCoords, callback) {
+  markerAddingDisabled = true;
+
   if (isCorrect) {
     alert("Correct!");
   } else {
     alert(
-      `Wrong! The correct location was near x: ${correctPoint.x}, y: ${correctPoint.y}`,
+      `Wrong! The correct location was near longitude: ${
+        correctCoords[0]
+      }, latitude: ${correctCoords[1]}`,
     );
   }
-  callback(isCorrect);
+
+  setTimeout(() => {
+    markerAddingDisabled = false;
+    callback(isCorrect);
+  }, 2000);
+}
+
+async function fetchQuestions(numQuestions, gameType) {
+  const response = await fetch("/api/singleplayer", {
+    method: "GET",
+    headers: {
+      "X-Num-Questions": numQuestions.toString(),
+      "game-type": gameType,
+    },
+  });
+  if (!response.ok) throw new Error("Failed to fetch questions.");
+  return response.json();
 }
 
 function toggleVisibility(element, visible) {
   element.classList.toggle("hidden", !visible);
 }
 
-function showGameOverModal(score, totalQuestions) {
-  updateElementText(
-    elements.finalScore,
-    `Your score: ${score}/${totalQuestions}`,
-  );
-  toggleVisibility(elements.gameModal, true);
+function updateProgress(currentIndex, totalQuestions) {
+  elements.progress.textContent = `Question ${currentIndex + 1} of ${totalQuestions}`;
 }
 
-function showErrorMessage(message) {
-  updateElementText(elements.errorMessage, message);
-  toggleVisibility(elements.errorMessage, true);
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+
+function showGameOverModal(score, totalQuestions) {
+  elements.finalScore.textContent = `Your score: ${score}/${totalQuestions}`;
+  toggleVisibility(elements.gameModal, true);
 }
 
 async function startGame() {
@@ -166,7 +231,9 @@ async function startGame() {
   const gameType = document.getElementById("game-type").value;
 
   if (isNaN(numQuestions) || numQuestions <= 0) {
-    showErrorMessage("Please enter a valid number of questions.");
+    elements.errorMessage.textContent =
+      "Please enter a valid number of questions.";
+    toggleVisibility(elements.errorMessage, true);
     return;
   }
 
@@ -176,10 +243,14 @@ async function startGame() {
 
     const questions = await fetchQuestions(numQuestions, gameType);
 
+    if (gameType === "MAP") {
+      loadMapCSSAndJS(initializeMap);
+    }
+
     toggleVisibility(elements.game, true);
 
-    let currentIndex = 0,
-      score = 0;
+    let currentIndex = 0;
+    let score = 0;
 
     function nextQuestion(correct) {
       if (correct) score++;
@@ -204,7 +275,9 @@ async function startGame() {
       gameType,
     );
   } catch {
-    showErrorMessage("An error occurred while fetching the game data.");
+    elements.errorMessage.textContent =
+      "An error occurred while fetching the game data.";
+    toggleVisibility(elements.errorMessage, true);
   }
 }
 
