@@ -52,24 +52,53 @@ func createRoomHandler(w http.ResponseWriter, r *http.Request) {
 		game.CreateRoomRequest
 		HostUsername string `json:"hostUsername"`
 	}
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid JSON format", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Error: "Invalid JSON format",
+		})
 		return
 	}
 
 	if err := ValidateCreateRoomRequest(&req.CreateRoomRequest); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Error: err.Error(),
+		})
 		return
 	}
 
+	roomsLock.Lock()
+	if len(rooms) >= 10 {
+		roomsLock.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Error: "Maximum number of rooms (10) reached. Cannot create more rooms.",
+		})
+		return
+	}
+	roomsLock.Unlock()
+
 	if req.HostUsername == "" {
-		http.Error(w, "Host username is required", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Error: "Host username is required",
+		})
 		return
 	}
 
 	questions, err := generateQuestions(req.NumQuestions)
 	if err != nil {
-		http.Error(w, "Failed to generate questions: "+err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Error: "Failed to generate questions: " + err.Error(),
+		})
 		return
 	}
 
@@ -151,6 +180,12 @@ func joinRoomHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Check for existing username with room lock
 	room.Mutex.Lock()
+	if len(room.Players) >= 9 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Room is full, only 9 members can join in one room"})
+		return
+	}
 	usernameExists := false
 	for _, player := range room.Players {
 		if player != nil && strings.EqualFold(player.Username, req.Username) {
@@ -162,7 +197,7 @@ func joinRoomHandler(w http.ResponseWriter, r *http.Request) {
 
 	if usernameExists {
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusConflict) // Using 409 Conflict for username collision
+		w.WriteHeader(http.StatusConflict)
 		json.NewEncoder(w).Encode(ErrorResponse{
 			Error: fmt.Sprintf("Username '%s' is already taken. Please choose another username.", req.Username),
 		})

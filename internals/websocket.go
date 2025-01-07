@@ -43,6 +43,12 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(room.Players) >= 9 {
+		room.Mutex.Unlock()
+		conn.WriteJSON(map[string]string{"error": "Room is full, only 9 members can join in one room"})
+		return
+	}
+
 	// Create a new player instance
 	player := &game.Player{
 		Username: initialMessage.Username,
