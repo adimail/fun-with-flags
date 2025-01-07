@@ -34,14 +34,21 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	roomsLock.Lock()
 	room, exists := rooms[initialMessage.RoomID]
+	roomsLock.Unlock()
+
 	if !exists {
 		conn.WriteJSON(map[string]string{"error": "Room not found"})
 		return
 	}
 
 	// Create a new player instance
-	player := &game.Player{Username: initialMessage.Username, Score: 0}
+	player := &game.Player{
+		Username: initialMessage.Username,
+		Score:    0,
+		Conn:     conn,
+	}
 
 	// Add the player to the room's Players map
 	room.Mutex.Lock()
@@ -66,7 +73,8 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 		err := conn.ReadJSON(&message)
 		if err != nil {
-			log.Printf("WebSocket read error for player %s: %v", player.Username, err)
+			// Log player disconnection as an info message
+			log.Printf("WebSocket connection closed for player %s: %v", player.Username, err)
 			break
 		}
 
@@ -76,9 +84,10 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			handleAnswer(room, player, message.Data)
 
 		case "leave":
-			// Handle player leaving the room explicitly
+			// Handle player leaving explicitly
 			log.Printf("Player %s left the room", player.Username)
-			removePlayerFromRoom(room, conn, player)
+			removePlayerFromRoom(initialMessage.RoomID, room, conn, player)
+			return // End WebSocket loop for this player
 
 		case "updateScore":
 			// Update player's score
@@ -103,12 +112,13 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Handle implicit player leaving due to WebSocket disconnection
-	removePlayerFromRoom(room, conn, player)
+	removePlayerFromRoom(initialMessage.RoomID, room, conn, player)
 }
 
-func removePlayerFromRoom(room *game.Room, conn *websocket.Conn, player *game.Player) {
+func removePlayerFromRoom(roomID string, room *game.Room, conn *websocket.Conn, player *game.Player) {
 	room.Mutex.Lock()
 	delete(room.Players, conn)
+	remainingPlayers := len(room.Players)
 	room.Mutex.Unlock()
 
 	// Notify remaining players
@@ -118,6 +128,15 @@ func removePlayerFromRoom(room *game.Room, conn *websocket.Conn, player *game.Pl
 			"username": player.Username,
 		},
 	})
+
+	if remainingPlayers == 0 {
+		// Remove the room if no players are left
+		roomsLock.Lock()
+		delete(rooms, roomID)
+		roomsLock.Unlock()
+
+		log.Printf("Room %s is empty and has been closed.", roomID)
+	}
 }
 
 func broadcastToRoom(room *game.Room, message interface{}) {
@@ -125,10 +144,6 @@ func broadcastToRoom(room *game.Room, message interface{}) {
 	defer room.Mutex.Unlock()
 
 	for conn, player := range room.Players {
-		if conn == nil {
-			continue
-		}
-
 		if err := conn.WriteJSON(message); err != nil {
 			log.Printf("Error broadcasting message to player %s: %v", player.Username, err)
 			conn.Close()
@@ -140,5 +155,4 @@ func broadcastToRoom(room *game.Room, message interface{}) {
 func handleAnswer(room *game.Room, player *game.Player, data interface{}) {
 	log.Printf("Player %s from room %s submitted an answer: %v", player.Username, room.Code, data)
 	// Logic to handle and evaluate the answer
-	// Example: Update the player's score based on correctness
 }

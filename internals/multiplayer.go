@@ -83,9 +83,6 @@ func createRoomHandler(w http.ResponseWriter, r *http.Request) {
 		TimeLimit: req.TimeLimit,
 	}
 
-	hostPlayer := &game.Player{Username: req.HostUsername, Score: 0}
-	room.Players[nil] = hostPlayer
-
 	for i, q := range questions {
 		room.Questions[strconv.Itoa(i)] = &q
 	}
