@@ -13,16 +13,23 @@ const elements = {
   questionModal: document.getElementById("question-modal"),
   startGameBtn: document.getElementById("start-game-btn"),
   endGame: document.getElementById("endgame"),
+  gameMCQ: document.getElementById("game-mcq"),
+  gameMap: document.getElementById("game-map"),
+  flagMap: document.getElementById("flag-map"),
+  mapContainer: document.querySelector(".map-container"),
 };
 
 elements.numQuestions.addEventListener("input", function () {
   elements.rangeValue.textContent = this.value;
 });
 
-async function fetchQuestions(numQuestions) {
+async function fetchQuestions(numQuestions, gameType) {
   const response = await fetch("/api/singleplayer", {
     method: "GET",
-    headers: { "X-Num-Questions": numQuestions.toString() },
+    headers: {
+      "X-Num-Questions": numQuestions.toString(),
+      "game-type": gameType,
+    },
   });
   if (!response.ok) throw new Error("Failed to fetch questions.");
   return response.json();
@@ -46,26 +53,59 @@ function updateProgress(currentIndex, totalQuestions) {
   );
 }
 
-function loadQuestion(question, currentIndex, totalQuestions, callback) {
-  elements.flag.src = question.flag_url;
+function loadQuestion(
+  question,
+  currentIndex,
+  totalQuestions,
+  callback,
+  gameType,
+) {
   updateProgress(currentIndex, totalQuestions);
 
-  const optionsArray = [...question.options];
-  shuffleArray(optionsArray);
+  if (gameType === "MCQ") {
+    toggleVisibility(elements.gameMCQ, true);
+    toggleVisibility(elements.gameMap, false);
 
-  elements.options.innerHTML = optionsArray
-    .map((option) => `<button class="option">${option}</button>`)
-    .join("");
+    elements.flag.src = question.flag_url;
+    const optionsArray = [...question.options];
+    shuffleArray(optionsArray);
 
-  Array.from(elements.options.children).forEach((button) => {
-    button.onclick = () =>
-      handleAnswer(
-        button,
-        button.textContent === question.answer,
-        question.answer,
-        callback,
-      );
-  });
+    elements.options.innerHTML = optionsArray
+      .map((option) => `<button class="option">${option}</button>`)
+      .join("");
+
+    Array.from(elements.options.children).forEach((button) => {
+      button.onclick = () =>
+        handleAnswer(
+          button,
+          button.textContent === question.answer,
+          question.answer,
+          callback,
+        );
+    });
+  } else if (gameType === "MAP") {
+    toggleVisibility(elements.gameMCQ, false);
+    toggleVisibility(elements.gameMap, true);
+
+    elements.flagMap.src = question.flag_url;
+
+    elements.mapContainer.onclick = (event) => {
+      const userPoint = { x: event.offsetX, y: event.offsetY };
+      const correctPoint = question.coordinates;
+
+      const isCorrect = validateMapSelection(userPoint, correctPoint);
+      handleMapAnswer(isCorrect, question.coordinates, callback);
+    };
+  }
+}
+
+function validateMapSelection(userPoint, correctPoint) {
+  const tolerance = 50;
+  const distance = Math.sqrt(
+    Math.pow(userPoint.x - correctPoint.x, 2) +
+      Math.pow(userPoint.y - correctPoint.y, 2),
+  );
+  return distance <= tolerance;
 }
 
 function handleAnswer(selectedButton, isCorrect, correctAnswer, callback) {
@@ -93,6 +133,17 @@ function handleAnswer(selectedButton, isCorrect, correctAnswer, callback) {
   }, 2000);
 }
 
+function handleMapAnswer(isCorrect, correctPoint, callback) {
+  if (isCorrect) {
+    alert("Correct!");
+  } else {
+    alert(
+      `Wrong! The correct location was near x: ${correctPoint.x}, y: ${correctPoint.y}`,
+    );
+  }
+  callback(isCorrect);
+}
+
 function toggleVisibility(element, visible) {
   element.classList.toggle("hidden", !visible);
 }
@@ -112,6 +163,7 @@ function showErrorMessage(message) {
 
 async function startGame() {
   const numQuestions = parseInt(elements.numQuestions.value);
+  const gameType = document.getElementById("game-type").value;
 
   if (isNaN(numQuestions) || numQuestions <= 0) {
     showErrorMessage("Please enter a valid number of questions.");
@@ -122,7 +174,8 @@ async function startGame() {
     toggleVisibility(elements.questionModal, false);
     toggleVisibility(elements.game, false);
 
-    const questions = await fetchQuestions(numQuestions);
+    const questions = await fetchQuestions(numQuestions, gameType);
+
     toggleVisibility(elements.game, true);
 
     let currentIndex = 0,
@@ -136,6 +189,7 @@ async function startGame() {
           currentIndex,
           questions.length,
           nextQuestion,
+          gameType,
         );
       } else {
         showGameOverModal(score, questions.length);
@@ -147,9 +201,8 @@ async function startGame() {
       currentIndex,
       questions.length,
       nextQuestion,
+      gameType,
     );
-
-    elements.endGame.onclick = () => showGameOverModal(score, questions.length);
   } catch {
     showErrorMessage("An error occurred while fetching the game data.");
   }

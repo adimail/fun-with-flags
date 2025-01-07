@@ -12,13 +12,24 @@
 
     <div id="question-modal" class="modal">
       <div class="modal-content">
-        <h2>Select Number of Questions</h2>
+        <h2>Game Settings</h2>
+
+        <!-- Game Type Selection -->
+        <select id="game-type">
+          <option value="MCQ" selected>Multiple Choice Quiz</option>
+          <option value="MAP">Map Challenge</option>
+        </select>
+
+        <br />
+        <br />
+
+        <!-- Number of Questions -->
         <label for="num-questions"
           >Number of questions: <span id="range-value">10</span>
         </label>
-
         <input type="range" id="num-questions" min="10" max="25" value="10" />
-        <div style="display: flex; gap: 10px">
+
+        <div style="display: flex; gap: 10px; margin-top: 15px">
           <button id="start-game-btn" class="action-btn">Start Game</button>
           <button class="action-btn" onclick="toggleTheme()">
             Toggle Theme
@@ -29,11 +40,28 @@
       </div>
     </div>
 
-    <main>
-      <div id="game" class="hidden">
+    <main id="game" class="hidden">
+      <!-- MCQ Layout -->
+      <div id="game-mcq" class="hidden">
         <p id="progress"></p>
         <img id="flag" class="flag" src="" alt="Country Flag" />
         <div id="options" class="options"></div>
+      </div>
+
+      <!-- Map Challenge Layout -->
+      <div id="game-map" class="hidden">
+        <p id="progress"></p>
+        <img id="flag-map" class="flag" src="" alt="Country Flag" />
+        <div class="map-container">
+          <img
+            src="/static/images/world-map.jpg"
+            alt="World Map"
+            class="world-map"
+          />
+        </div>
+        <p class="map-instruction">
+          Click on the map to select the country's location.
+        </p>
       </div>
     </main>
 

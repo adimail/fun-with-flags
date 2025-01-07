@@ -19,6 +19,8 @@ func SinglePlayerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	gameType := r.Header.Get("game-type")
+
 	file, err := os.Open("./data/countries.csv")
 	if err != nil {
 		http.Error(w, "Failed to read country data", http.StatusInternalServerError)
@@ -34,7 +36,6 @@ func SinglePlayerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rng := newRandomGenerator()
-
 	selectedCountries := selectRandomCountries(rows, numQuestions, rng)
 
 	var questions []game.Question
@@ -43,18 +44,30 @@ func SinglePlayerHandler(w http.ResponseWriter, r *http.Request) {
 		countryCode := row[1]
 		flagURL := filepath.Join("/static/svg", countryCode+".svg")
 
-		options := []string{countryName}
-		for j := 0; j < 3; j++ {
-			options = append(options, selectedCountries[(i+j+1)%len(selectedCountries)][0])
+		question := game.Question{
+			FlagURL: flagURL,
+			Answer:  countryName,
 		}
 
-		shuffleOptions(options, rng)
+		if gameType == "map" {
+			latitude, errLat := strconv.ParseFloat(row[2], 64)
+			longitude, errLon := strconv.ParseFloat(row[3], 64)
+			if errLat != nil || errLon != nil {
+				http.Error(w, "Invalid latitude or longitude in data", http.StatusInternalServerError)
+				return
+			}
+			question.Latitude = latitude
+			question.Longitude = longitude
+		} else {
+			options := []string{countryName}
+			for j := 0; j < 3; j++ {
+				options = append(options, selectedCountries[(i+j+1)%len(selectedCountries)][0])
+			}
+			shuffleOptions(options, rng)
+			question.Options = options
+		}
 
-		questions = append(questions, game.Question{
-			FlagURL: flagURL,
-			Options: options,
-			Answer:  countryName,
-		})
+		questions = append(questions, question)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
