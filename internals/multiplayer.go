@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -124,6 +125,7 @@ func joinRoomHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate username
 	if req.Username == "" || len(req.Username) < 4 || len(req.Username) > 10 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
@@ -131,6 +133,7 @@ func joinRoomHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate room ID
 	if req.RoomID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
@@ -149,19 +152,25 @@ func joinRoomHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check for existing username with room lock
+	room.Mutex.Lock()
+	usernameExists := false
 	for _, player := range room.Players {
-		if player != nil && player.Username == req.Username {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(ErrorResponse{
-				Error: fmt.Sprintf("Please choose another username, player '%s' exists in the room '%s'", req.Username, req.RoomID),
-			})
-			return
+		if player != nil && strings.EqualFold(player.Username, req.Username) {
+			usernameExists = true
+			break
 		}
 	}
+	room.Mutex.Unlock()
 
-	player := &game.Player{Username: req.Username, Score: 0}
-	room.Players[nil] = player
+	if usernameExists {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict) // Using 409 Conflict for username collision
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Error: fmt.Sprintf("Username '%s' is already taken. Please choose another username.", req.Username),
+		})
+		return
+	}
 
 	response := map[string]interface{}{
 		"code":         room.Code,
@@ -239,20 +248,4 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"rooms": allRooms,
 	})
-}
-
-func getSerializablePlayers(room *game.Room) []map[string]interface{} {
-	players := []map[string]interface{}{}
-	room.Mutex.Lock()
-	defer room.Mutex.Unlock()
-
-	for _, playerConn := range room.Players {
-		if playerConn != nil {
-			players = append(players, map[string]interface{}{
-				"username": playerConn.Username,
-				"score":    playerConn.Score,
-			})
-		}
-	}
-	return players
 }

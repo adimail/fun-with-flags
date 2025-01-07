@@ -69,7 +69,6 @@ const handleWebSocketMessage = (event) => {
       updatePlayerCount();
       break;
     case "playerLeft":
-    case "playerDisconnected":
       removePlayerFromList(message.data.username);
       updatePlayerCount();
       break;

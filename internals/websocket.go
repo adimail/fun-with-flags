@@ -76,17 +76,9 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			handleAnswer(room, player, message.Data)
 
 		case "leave":
-			// Handle player leaving the room
+			// Handle player leaving the room explicitly
 			log.Printf("Player %s left the room", player.Username)
-			room.Mutex.Lock()
-			delete(room.Players, conn)
-			room.Mutex.Unlock()
-
-			// Notify other players
-			broadcastToRoom(room, map[string]interface{}{
-				"event": "playerLeft",
-				"data":  player.Username,
-			})
+			removePlayerFromRoom(room, conn, player)
 
 		case "updateScore":
 			// Update player's score
@@ -110,15 +102,21 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Cleanup on WebSocket close
+	// Handle implicit player leaving due to WebSocket disconnection
+	removePlayerFromRoom(room, conn, player)
+}
+
+func removePlayerFromRoom(room *game.Room, conn *websocket.Conn, player *game.Player) {
 	room.Mutex.Lock()
 	delete(room.Players, conn)
 	room.Mutex.Unlock()
 
-	// Notify players that the user has disconnected
+	// Notify remaining players
 	broadcastToRoom(room, map[string]interface{}{
-		"event": "playerDisconnected",
-		"data":  player.Username,
+		"event": "playerLeft",
+		"data": map[string]interface{}{
+			"username": player.Username,
+		},
 	})
 }
 
@@ -140,7 +138,7 @@ func broadcastToRoom(room *game.Room, message interface{}) {
 }
 
 func handleAnswer(room *game.Room, player *game.Player, data interface{}) {
-	log.Printf("Player %s submitted an answer: %v", player.Username, data)
+	log.Printf("Player %s from room %s submitted an answer: %v", player.Username, room.Code, data)
 	// Logic to handle and evaluate the answer
 	// Example: Update the player's score based on correctness
 }

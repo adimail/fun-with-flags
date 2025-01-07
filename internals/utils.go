@@ -73,3 +73,25 @@ func generateQuestions(numQuestions int) ([]game.Question, error) {
 	}
 	return questions, nil
 }
+
+func getSerializablePlayers(room *game.Room) []map[string]interface{} {
+	players := []map[string]interface{}{}
+	uniquePlayers := make(map[string]bool)
+
+	room.Mutex.Lock()
+	defer room.Mutex.Unlock()
+
+	for _, playerConn := range room.Players {
+		if playerConn != nil {
+			// Only add the player if we haven't seen their username before
+			if !uniquePlayers[playerConn.Username] {
+				players = append(players, map[string]interface{}{
+					"username": playerConn.Username,
+					"score":    playerConn.Score,
+				})
+				uniquePlayers[playerConn.Username] = true
+			}
+		}
+	}
+	return players
+}
