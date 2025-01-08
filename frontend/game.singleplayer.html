@@ -13,17 +13,14 @@
     <div id="question-modal" class="modal">
       <div class="modal-content">
         <h2>Game Settings</h2>
-
-        <!-- Game Type Selection -->
         <select id="game-type">
-          <option value="MCQ">Multiple Choice Quiz</option>
-          <option value="MAP" selected>Map Challenge</option>
+          <option value="MCQ" selected>Multiple Choice Quiz</option>
+          <option value="MAP">Map Challenge</option>
         </select>
 
         <br />
         <br />
 
-        <!-- Number of Questions -->
         <label for="num-questions"
           >Number of questions: <span id="range-value">10</span>
         </label>
@@ -41,14 +38,12 @@
     </div>
 
     <main id="game" class="hidden">
-      <!-- MCQ Layout -->
       <div id="game-mcq" class="hidden">
         <p id="progress-mcq"></p>
         <img id="flag" class="flag" src="" alt="Country Flag" />
         <div id="options" class="options"></div>
       </div>
 
-      <!-- Map Challenge Layout -->
       <div id="game-map" class="hidden">
         <div id="map" class="map-container"></div>
         <img

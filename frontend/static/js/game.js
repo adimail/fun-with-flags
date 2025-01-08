@@ -64,8 +64,8 @@ class GameLogic {
       layers: [vectorLayer, highlightLayer],
       view: new ol.View({
         center: ol.proj.fromLonLat([0, 0]),
-        zoom: 2,
-        minZoom: 2,
+        zoom: 3,
+        minZoom: 2.5,
         maxZoom: 5,
         extent: extent,
       }),
@@ -101,18 +101,18 @@ class GameLogic {
         if (isCorrect) {
           this.highlightCountry(
             userSelectedCountry,
-            "rgba(50, 205, 50, 0.3)",
+            "rgba(50, 205, 50, 0.6)",
             "#32CD32",
           );
         } else {
           this.highlightCountry(
             userSelectedCountry,
-            "rgba(255, 0, 0, 0.3)",
+            "rgba(255, 0, 0, 0.6)",
             "#FF0000",
           );
           this.highlightCountry(
             correctCountry,
-            "rgba(50, 205, 50, 0.3)",
+            "rgba(50, 205, 50, 0.6)",
             "#32CD32",
           );
         }
@@ -191,12 +191,7 @@ class GameLogic {
     });
   }
 
-  highlightCountry(
-    countryName,
-    backgroundColor,
-    borderColor,
-    tooltipBackground = null,
-  ) {
+  highlightCountry(countryName, backgroundColor, borderColor) {
     const highlightSource = new ol.source.Vector();
     const highlightLayer = new ol.layer.Vector({
       source: highlightSource,
@@ -224,12 +219,7 @@ class GameLogic {
     tooltip.style.border = "1px solid black";
     tooltip.style.display = "none";
     tooltip.style.zIndex = "1000";
-
-    if (tooltipBackground === "white") {
-      tooltip.style.background = "white";
-    } else {
-      tooltip.style.background = backgroundColor;
-    }
+    tooltip.style.background = backgroundColor;
 
     document.body.appendChild(tooltip);
 

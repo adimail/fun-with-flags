@@ -7,11 +7,9 @@ import (
 )
 
 type Question struct {
-	FlagURL   string   `json:"flag_url"`
-	Options   []string `json:"options,omitempty"`
-	Answer    string   `json:"answer"`
-	Latitude  float64  `json:"latitude,omitempty"`
-	Longitude float64  `json:"longitude,omitempty"`
+	FlagURL string   `json:"flag_url"`
+	Options []string `json:"options,omitempty"`
+	Answer  string   `json:"answer"`
 }
 
 type Player struct {

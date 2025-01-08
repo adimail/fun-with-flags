@@ -51,6 +51,11 @@ func Router() *mux.Router {
 		http.ServeFile(w, r, "./frontend/game.singleplayer.html")
 	})
 
+	// "/map" Single player game
+	r.HandleFunc("/map", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./frontend/worldmap.html")
+	})
+
 	// game state
 	r.HandleFunc("/api/singleplayer", SinglePlayerHandler).Methods("GET")
 	r.HandleFunc("/api/createroom", createRoomHandler).Methods("POST")

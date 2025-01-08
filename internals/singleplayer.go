@@ -49,16 +49,7 @@ func SinglePlayerHandler(w http.ResponseWriter, r *http.Request) {
 			Answer:  countryName,
 		}
 
-		if gameType == "MAP" {
-			latitude, errLat := strconv.ParseFloat(row[2], 64)
-			longitude, errLon := strconv.ParseFloat(row[3], 64)
-			if errLat != nil || errLon != nil {
-				http.Error(w, "Invalid latitude or longitude in data", http.StatusInternalServerError)
-				return
-			}
-			question.Latitude = latitude
-			question.Longitude = longitude
-		} else {
+		if gameType != "MAP" {
 			options := []string{countryName}
 			for j := 0; j < 3; j++ {
 				options = append(options, selectedCountries[(i+j+1)%len(selectedCountries)][0])
