@@ -18,13 +18,34 @@ class GameLogic {
   }
 
   initializeMap(targetId) {
-    this.vectorSource = new ol.source.Vector();
+    this.vectorSource = new ol.source.Vector({
+      url: "https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json",
+      format: new ol.format.GeoJSON(),
+    });
+
     const vectorLayer = new ol.layer.Vector({
       source: this.vectorSource,
       style: new ol.style.Style({
-        image: new ol.style.Circle({
-          radius: 6,
-          fill: new ol.style.Fill({ color: "red" }),
+        stroke: new ol.style.Stroke({
+          color: "rgba(80, 120, 200, 0.8)",
+          width: 1.5,
+        }),
+        fill: new ol.style.Fill({
+          color: "rgba(173, 216, 230, 0.6)",
+        }),
+      }),
+    });
+
+    const highlightSource = new ol.source.Vector();
+    const highlightLayer = new ol.layer.Vector({
+      source: highlightSource,
+      style: new ol.style.Style({
+        stroke: new ol.style.Stroke({
+          color: "#32CD32",
+          width: 3,
+        }),
+        fill: new ol.style.Fill({
+          color: "rgba(50, 205, 50, 0.3)",
         }),
       }),
     });
@@ -37,19 +58,65 @@ class GameLogic {
 
     this.map = new ol.Map({
       target: targetId,
-      layers: [
-        new ol.layer.Tile({
-          source: new ol.source.OSM(),
-        }),
-        vectorLayer,
-      ],
+      layers: [vectorLayer, highlightLayer],
       view: new ol.View({
         center: ol.proj.fromLonLat([0, 0]),
         zoom: 2,
         minZoom: 2,
-        maxZoom: 3,
+        maxZoom: 5,
         extent: extent,
       }),
+    });
+
+    let disableHover = false;
+    const tooltip = document.createElement("div");
+    tooltip.style.position = "absolute";
+    tooltip.style.background = "white";
+    tooltip.style.color = "black";
+    tooltip.style.padding = "5px";
+    tooltip.style.border = "1px solid black";
+    tooltip.style.display = "none";
+    document.body.appendChild(tooltip);
+
+    this.map.on("pointermove", (event) => {
+      if (disableHover) return;
+      highlightSource.clear();
+      this.map.forEachFeatureAtPixel(event.pixel, (feature) => {
+        const geometry = feature.getGeometry();
+        const clonedFeature = feature.clone();
+        clonedFeature.setGeometry(geometry);
+        highlightSource.addFeature(clonedFeature);
+      });
+    });
+
+    this.map.on("singleclick", (event) => {
+      highlightSource.clear();
+      tooltip.style.display = "none";
+      const clickedFeature = this.map.forEachFeatureAtPixel(
+        event.pixel,
+        (feature) => feature,
+      );
+      if (clickedFeature) {
+        const geometry = clickedFeature.getGeometry();
+        const clonedFeature = clickedFeature.clone();
+        clonedFeature.setGeometry(geometry);
+        highlightSource.addFeature(clonedFeature);
+
+        const countryName = clickedFeature.get("name");
+        if (countryName) {
+          tooltip.style.display = "block";
+          tooltip.style.left = event.originalEvent.pageX + "px";
+          tooltip.style.top = event.originalEvent.pageY + "px";
+          tooltip.innerHTML = countryName;
+        }
+
+        disableHover = true;
+        setTimeout(() => {
+          highlightSource.clear();
+          tooltip.style.display = "none";
+          disableHover = false;
+        }, 4000);
+      }
     });
   }
 
