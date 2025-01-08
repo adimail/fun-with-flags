@@ -19,7 +19,7 @@ class GameLogic {
 
   initializeMap(targetId) {
     this.vectorSource = new ol.source.Vector({
-      url: "https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json",
+      url: "/static/countries.geo.json",
       format: new ol.format.GeoJSON(),
     });
 
@@ -90,57 +90,28 @@ class GameLogic {
     });
 
     this.map.on("singleclick", (event) => {
-      highlightSource.clear();
-      tooltip.style.display = "none";
       const clickedFeature = this.map.forEachFeatureAtPixel(
         event.pixel,
         (feature) => feature,
       );
-      if (clickedFeature) {
-        const geometry = clickedFeature.getGeometry();
-        const clonedFeature = clickedFeature.clone();
-        clonedFeature.setGeometry(geometry);
-        highlightSource.addFeature(clonedFeature);
 
+      if (clickedFeature) {
         const countryName = clickedFeature.get("name");
         if (countryName) {
-          tooltip.style.display = "block";
-          tooltip.style.left = event.originalEvent.pageX + "px";
-          tooltip.style.top = event.originalEvent.pageY + "px";
-          tooltip.innerHTML = countryName;
+          this.highlightCountry(
+            countryName,
+            "rgba(50, 205, 50, 0.3)",
+            "#32CD32",
+            event.originalEvent,
+          );
+        } else {
+          console.warn("Feature clicked does not have a 'name' property.");
         }
-
-        disableHover = true;
-        setTimeout(() => {
-          highlightSource.clear();
-          tooltip.style.display = "none";
-          disableHover = false;
-        }, 4000);
       }
     });
   }
 
-  addMarker(coords) {
-    const marker = new ol.Feature({
-      geometry: new ol.geom.Point(coords),
-    });
-    this.vectorSource.addFeature(marker);
-  }
-
-  clearMarkers() {
-    this.vectorSource.clear();
-  }
-
-  validateMapSelection(userCoords, correctCoords) {
-    const tolerance = 200000;
-    const distance = ol.sphere.getDistance(
-      ol.proj.toLonLat(userCoords),
-      ol.proj.toLonLat(correctCoords),
-    );
-    return distance <= tolerance;
-  }
-
-  shuffleArray(array) {
+  shuffleOptions(array) {
     for (let i = array.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [array[i], array[j]] = [array[j], array[i]];
@@ -175,16 +146,8 @@ class GameLogic {
     }, 2000);
   }
 
-  handleMapAnswer(isCorrect, correctCoords, callback) {
+  handleMapAnswer(isCorrect, callback) {
     this.markerAddingDisabled = true;
-
-    alert(
-      isCorrect
-        ? "Correct!"
-        : `Wrong! The correct location was near longitude: ${
-            correctCoords[0]
-          }, latitude: ${correctCoords[1]}`,
-    );
 
     setTimeout(() => {
       this.markerAddingDisabled = false;
@@ -196,29 +159,30 @@ class GameLogic {
     mapElement.classList.remove("hidden");
     flagElement.src = question.flag_url;
 
-    this.clearMarkers();
-
     this.map.once("click", (event) => {
       if (this.markerAddingDisabled) return;
 
-      const userCoords = event.coordinate;
-      const correctCoords = ol.proj.fromLonLat([
-        question.coordinates.lon,
-        question.coordinates.lat,
-      ]);
+      const clickedFeature = this.map.forEachFeatureAtPixel(
+        event.pixel,
+        (feature) => feature,
+      );
 
-      const isCorrect = this.validateMapSelection(userCoords, correctCoords);
+      if (clickedFeature) {
+        const userSelectedCountry = clickedFeature.get("name");
 
-      this.addMarker(userCoords);
+        const isCorrect = question.answer === userSelectedCountry;
 
-      this.handleMapAnswer(isCorrect, correctCoords, callback);
+        this.handleMapAnswer(isCorrect, callback);
+      } else {
+        alert("Please select a valid country.");
+      }
     });
   }
 
   loadMCQQuestion(flagElement, optionsElement, question, callback) {
     flagElement.src = question.flag_url;
     const optionsArray = [...question.options];
-    this.shuffleArray(optionsArray);
+    this.shuffleOptions(optionsArray);
 
     optionsElement.innerHTML = optionsArray
       .map((option) => `<button class="option">${option}</button>`)
@@ -233,6 +197,60 @@ class GameLogic {
           callback,
         );
     });
+  }
+
+  highlightCountry(countryName, backgroundColor, borderColor, cursorPosition) {
+    const highlightSource = new ol.source.Vector();
+    const highlightLayer = new ol.layer.Vector({
+      source: highlightSource,
+      style: new ol.style.Style({
+        stroke: new ol.style.Stroke({
+          color: borderColor,
+          width: 3,
+        }),
+        fill: new ol.style.Fill({
+          color: backgroundColor,
+        }),
+      }),
+    });
+
+    if (!this.map.getLayers().getArray().includes(highlightLayer)) {
+      this.map.addLayer(highlightLayer);
+    }
+
+    highlightSource.clear();
+
+    const tooltip = document.createElement("div");
+    tooltip.style.position = "absolute";
+    tooltip.style.background = "white";
+    tooltip.style.color = "black";
+    tooltip.style.padding = "5px";
+    tooltip.style.border = "1px solid black";
+    tooltip.style.display = "none";
+    document.body.appendChild(tooltip);
+
+    const features = this.vectorSource.getFeatures();
+    const feature = features.find((f) => f.get("name") === countryName);
+
+    if (feature) {
+      const geometry = feature.getGeometry();
+      const clonedFeature = feature.clone();
+      clonedFeature.setGeometry(geometry);
+      highlightSource.addFeature(clonedFeature);
+
+      tooltip.style.display = "block";
+      tooltip.style.left = `${cursorPosition.pageX + 10}px`;
+      tooltip.style.top = `${cursorPosition.pageY + 10}px`;
+      tooltip.innerHTML = countryName;
+
+      setTimeout(() => {
+        highlightSource.clear();
+        tooltip.style.display = "none";
+        document.body.removeChild(tooltip);
+      }, 4000);
+    } else {
+      console.warn(`Country '${countryName}' not found in the map source.`);
+    }
   }
 
   makeImageDraggable() {
