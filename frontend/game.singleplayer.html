@@ -16,8 +16,8 @@
 
         <!-- Game Type Selection -->
         <select id="game-type">
-          <option value="MCQ" selected>Multiple Choice Quiz</option>
-          <option value="MAP">Map Challenge</option>
+          <option value="MCQ">Multiple Choice Quiz</option>
+          <option value="MAP" selected>Map Challenge</option>
         </select>
 
         <br />
@@ -43,19 +43,22 @@
     <main id="game" class="hidden">
       <!-- MCQ Layout -->
       <div id="game-mcq" class="hidden">
-        <p id="progress"></p>
+        <p id="progress-mcq"></p>
         <img id="flag" class="flag" src="" alt="Country Flag" />
         <div id="options" class="options"></div>
       </div>
 
       <!-- Map Challenge Layout -->
       <div id="game-map" class="hidden">
-        <p id="progress"></p>
         <div id="map" class="map-container"></div>
-        <img id="flag-map" class="flag map-flag" src="" alt="Country Flag" />
-        <p class="map-instruction">
-          Click on the map to select the country's location.
-        </p>
+        <img
+          id="flag-map"
+          class="flag map-flag"
+          src=""
+          alt="Country Flag"
+          draggable="false"
+        />
+        <p id="progress-map"></p>
       </div>
     </main>
 

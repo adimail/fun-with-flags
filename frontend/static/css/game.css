@@ -29,6 +29,7 @@ h1 {
   padding: 15px;
   font-size: 1.8em;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 9999;
 }
 
 main {
@@ -49,6 +50,7 @@ footer {
   padding: 20px;
   background-color: var(--footer-bg);
   box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.1);
+  z-index: 9999;
 }
 
 footer a,
@@ -237,7 +239,7 @@ input[type="range"]::-moz-range-thumb {
   margin: 30px auto;
   border: 2px solid var(--primary-color);
   border-radius: var(--border-radius);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
 }
 
 .map-flag {

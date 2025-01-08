@@ -13,7 +13,8 @@ class SinglePlayerGameController {
       numQuestions: document.getElementById("num-questions"),
       flag: document.getElementById("flag"),
       options: document.getElementById("options"),
-      progress: document.getElementById("progress"),
+      progressMCQ: document.getElementById("progress-mcq"),
+      progressMap: document.getElementById("progress-map"),
       errorMessage: document.getElementById("error-message"),
       game: document.getElementById("game"),
       gameModal: document.getElementById("game-modal"),
@@ -105,15 +106,16 @@ class SinglePlayerGameController {
   }
 
   loadQuestion(question, currentIndex, totalQuestions, callback, gameType) {
-    this.gameLogic.updateProgress(
-      this.elements.progress,
-      currentIndex,
-      totalQuestions,
-    );
-
     if (gameType === "MCQ") {
       this.toggleVisibility(this.elements.gameMCQ, true);
       this.toggleVisibility(this.elements.gameMap, false);
+
+      this.gameLogic.updateProgress(
+        this.elements.progressMCQ,
+        currentIndex,
+        totalQuestions,
+      );
+
       this.gameLogic.loadMCQQuestion(
         this.elements.flag,
         this.elements.options,
@@ -123,6 +125,14 @@ class SinglePlayerGameController {
     } else if (gameType === "MAP") {
       this.toggleVisibility(this.elements.gameMCQ, false);
       this.toggleVisibility(this.elements.gameMap, true);
+
+      this.gameLogic.updateProgress(
+        this.elements.progressMap,
+        currentIndex,
+        totalQuestions,
+      );
+
+      this.gameLogic.makeImageDraggable();
       this.gameLogic.loadMapQuestion(
         this.elements.gameMap,
         this.elements.flagMap,

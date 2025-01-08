@@ -47,7 +47,7 @@ class GameLogic {
         center: ol.proj.fromLonLat([0, 0]),
         zoom: 2,
         minZoom: 2,
-        maxZoom: 2,
+        maxZoom: 3,
         extent: extent,
       }),
     });
@@ -165,6 +165,64 @@ class GameLogic {
           question.answer,
           callback,
         );
+    });
+  }
+
+  makeImageDraggable() {
+    const flagMap = document.getElementById("flag-map");
+    if (!flagMap) return;
+    let offsetX, offsetY;
+    flagMap.style.position = "absolute";
+    const moveImage = (clientX, clientY) => {
+      const minX = 0;
+      const minY = 0;
+      const maxX = window.innerWidth - flagMap.offsetWidth;
+      const maxY = window.innerHeight - flagMap.offsetHeight;
+      let newLeft = clientX - offsetX;
+      let newTop = clientY - offsetY;
+
+      newLeft = Math.max(minX, Math.min(maxX, newLeft));
+      newTop = Math.max(minY, Math.min(maxY, newTop));
+
+      flagMap.style.left = `${newLeft}px`;
+      flagMap.style.top = `${newTop}px`;
+    };
+
+    flagMap.addEventListener("mousedown", (e) => {
+      offsetX = e.clientX - flagMap.offsetLeft;
+      offsetY = e.clientY - flagMap.offsetTop;
+
+      const onMouseMove = (moveEvent) => {
+        moveImage(moveEvent.clientX, moveEvent.clientY);
+      };
+
+      const onMouseUp = () => {
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+      };
+
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseup", onMouseUp);
+    });
+
+    flagMap.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      offsetX = touch.clientX - flagMap.offsetLeft;
+      offsetY = touch.clientY - flagMap.offsetTop;
+
+      const onTouchMove = (moveEvent) => {
+        const touch = moveEvent.touches[0];
+        moveImage(touch.clientX, touch.clientY);
+      };
+
+      const onTouchEnd = () => {
+        document.removeEventListener("touchmove", onTouchMove);
+        document.removeEventListener("touchend", onTouchEnd);
+      };
+
+      document.addEventListener("touchmove", onTouchMove);
+      document.addEventListener("touchend", onTouchEnd);
     });
   }
 }
