@@ -3,6 +3,8 @@ class GameLogic {
     this.map = null;
     this.vectorSource = null;
     this.markerAddingDisabled = false;
+    this.currentQuestion = null;
+    this.currentCallback = null;
   }
 
   loadMapCSSAndJS(callback) {
@@ -18,8 +20,9 @@ class GameLogic {
   }
 
   initializeMap(targetId) {
+    this.makeImageDraggable();
     this.vectorSource = new ol.source.Vector({
-      url: "/static/countries.geo.json",
+      url: "https://raw.githubusercontent.com/adimail/fun-with-flags/refs/heads/master/frontend/static/countries.geo.json",
       format: new ol.format.GeoJSON(),
     });
 
@@ -69,14 +72,6 @@ class GameLogic {
     });
 
     let disableHover = false;
-    const tooltip = document.createElement("div");
-    tooltip.style.position = "absolute";
-    tooltip.style.background = "white";
-    tooltip.style.color = "black";
-    tooltip.style.padding = "5px";
-    tooltip.style.border = "1px solid black";
-    tooltip.style.display = "none";
-    document.body.appendChild(tooltip);
 
     this.map.on("pointermove", (event) => {
       if (disableHover) return;
@@ -89,24 +84,47 @@ class GameLogic {
       });
     });
 
-    this.map.on("singleclick", (event) => {
+    this.map.on("click", (event) => {
+      if (!this.currentQuestion || this.markerAddingDisabled) return;
+
       const clickedFeature = this.map.forEachFeatureAtPixel(
         event.pixel,
         (feature) => feature,
       );
 
       if (clickedFeature) {
-        const countryName = clickedFeature.get("name");
-        if (countryName) {
+        const userSelectedCountry = clickedFeature.get("name");
+        const correctCountry = this.currentQuestion.answer;
+        const isCorrect = correctCountry === userSelectedCountry;
+        this.markerAddingDisabled = true;
+
+        if (isCorrect) {
           this.highlightCountry(
-            countryName,
+            userSelectedCountry,
             "rgba(50, 205, 50, 0.3)",
             "#32CD32",
-            event.originalEvent,
           );
         } else {
-          console.warn("Feature clicked does not have a 'name' property.");
+          this.highlightCountry(
+            userSelectedCountry,
+            "rgba(255, 0, 0, 0.3)",
+            "#FF0000",
+          );
+          this.highlightCountry(
+            correctCountry,
+            "rgba(50, 205, 50, 0.3)",
+            "#32CD32",
+          );
         }
+
+        setTimeout(() => {
+          this.markerAddingDisabled = false;
+          if (this.currentCallback) {
+            this.currentCallback(isCorrect);
+          }
+        }, 4000);
+      } else {
+        alert("Please select a valid country.");
       }
     });
   }
@@ -146,37 +164,11 @@ class GameLogic {
     }, 2000);
   }
 
-  handleMapAnswer(isCorrect, callback) {
-    this.markerAddingDisabled = true;
-
-    setTimeout(() => {
-      this.markerAddingDisabled = false;
-      callback(isCorrect);
-    }, 2000);
-  }
-
   loadMapQuestion(mapElement, flagElement, question, callback) {
     mapElement.classList.remove("hidden");
     flagElement.src = question.flag_url;
-
-    this.map.once("click", (event) => {
-      if (this.markerAddingDisabled) return;
-
-      const clickedFeature = this.map.forEachFeatureAtPixel(
-        event.pixel,
-        (feature) => feature,
-      );
-
-      if (clickedFeature) {
-        const userSelectedCountry = clickedFeature.get("name");
-
-        const isCorrect = question.answer === userSelectedCountry;
-
-        this.handleMapAnswer(isCorrect, callback);
-      } else {
-        alert("Please select a valid country.");
-      }
-    });
+    this.currentQuestion = question;
+    this.currentCallback = callback;
   }
 
   loadMCQQuestion(flagElement, optionsElement, question, callback) {
@@ -199,7 +191,12 @@ class GameLogic {
     });
   }
 
-  highlightCountry(countryName, backgroundColor, borderColor, cursorPosition) {
+  highlightCountry(
+    countryName,
+    backgroundColor,
+    borderColor,
+    tooltipBackground = null,
+  ) {
     const highlightSource = new ol.source.Vector();
     const highlightLayer = new ol.layer.Vector({
       source: highlightSource,
@@ -222,11 +219,18 @@ class GameLogic {
 
     const tooltip = document.createElement("div");
     tooltip.style.position = "absolute";
-    tooltip.style.background = "white";
     tooltip.style.color = "black";
     tooltip.style.padding = "5px";
     tooltip.style.border = "1px solid black";
     tooltip.style.display = "none";
+    tooltip.style.zIndex = "1000";
+
+    if (tooltipBackground === "white") {
+      tooltip.style.background = "white";
+    } else {
+      tooltip.style.background = backgroundColor;
+    }
+
     document.body.appendChild(tooltip);
 
     const features = this.vectorSource.getFeatures();
@@ -238,10 +242,19 @@ class GameLogic {
       clonedFeature.setGeometry(geometry);
       highlightSource.addFeature(clonedFeature);
 
+      const extent = geometry.getExtent();
+      const center = ol.extent.getCenter(extent);
+      const pixel = this.map.getPixelFromCoordinate(center);
+
       tooltip.style.display = "block";
-      tooltip.style.left = `${cursorPosition.pageX + 10}px`;
-      tooltip.style.top = `${cursorPosition.pageY + 10}px`;
       tooltip.innerHTML = countryName;
+
+      requestAnimationFrame(() => {
+        const tooltipWidth = tooltip.offsetWidth;
+
+        tooltip.style.left = `${pixel[0] - tooltipWidth / 2}px`;
+        tooltip.style.top = `${pixel[1] + 10}px`;
+      });
 
       setTimeout(() => {
         highlightSource.clear();

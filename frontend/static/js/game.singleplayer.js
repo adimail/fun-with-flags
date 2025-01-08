@@ -132,7 +132,6 @@ class SinglePlayerGameController {
         totalQuestions,
       );
 
-      this.gameLogic.makeImageDraggable();
       this.gameLogic.loadMapQuestion(
         this.elements.gameMap,
         this.elements.flagMap,
