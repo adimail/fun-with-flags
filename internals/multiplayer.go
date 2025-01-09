@@ -39,6 +39,9 @@ func ValidateCreateRoomRequest(req *game.CreateRoomRequest) error {
 	if req.NumQuestions < 10 || req.NumQuestions > 25 {
 		return errors.New("number of questions must be between 10 and 25")
 	}
+	if req.GameType == "" {
+		return errors.New("game type is required")
+	}
 	return nil
 }
 
@@ -92,7 +95,7 @@ func createRoomHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	questions, err := generateQuestions(req.NumQuestions)
+	questions, err := generateQuestions(req.NumQuestions, req.GameType)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)

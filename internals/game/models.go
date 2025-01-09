@@ -34,6 +34,7 @@ type Room struct {
 }
 
 type CreateRoomRequest struct {
-	TimeLimit    int `json:"timeLimit"`
-	NumQuestions int `json:"numQuestions"`
+	TimeLimit    int    `json:"timeLimit"`
+	NumQuestions int    `json:"numQuestions"`
+	GameType     string `json:"gameType"`
 }

@@ -36,7 +36,7 @@ func selectRandomCountries(rows [][]string, count int, rng *rand.Rand) [][]strin
 	return rows[:count]
 }
 
-func generateQuestions(numQuestions int) ([]game.Question, error) {
+func generateQuestions(numQuestions int, gameType string) ([]game.Question, error) {
 	file, err := os.Open("./data/countries.csv")
 	if err != nil {
 		return nil, err
@@ -58,18 +58,21 @@ func generateQuestions(numQuestions int) ([]game.Question, error) {
 		countryCode := row[1]
 		flagURL := filepath.Join("/static/svg", countryCode+".svg")
 
-		options := []string{countryName}
-		for j := 0; j < 3; j++ {
-			options = append(options, selectedCountries[(i+j+1)%len(selectedCountries)][0])
+		question := game.Question{
+			FlagURL: flagURL,
+			Answer:  countryName,
 		}
 
-		shuffleOptions(options, rng)
+		if gameType != "MAP" {
+			options := []string{countryName}
+			for j := 0; j < 3; j++ {
+				options = append(options, selectedCountries[(i+j+1)%len(selectedCountries)][0])
+			}
+			shuffleOptions(options, rng)
+			question.Options = options
+		}
 
-		questions = append(questions, game.Question{
-			FlagURL: flagURL,
-			Options: options,
-			Answer:  countryName,
-		})
+		questions = append(questions, question)
 	}
 	return questions, nil
 }

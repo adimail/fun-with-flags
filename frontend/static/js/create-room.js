@@ -6,6 +6,7 @@ const elements = {
   hostUsername: document.getElementById("host-username"),
   rangeValueQ: document.getElementById("range-value-q"),
   rangeValueT: document.getElementById("range-value-t"),
+  gameType: document.getElementById("game-type"),
 };
 
 const handleRangeInput = (event, displayElement) => {
@@ -27,6 +28,7 @@ const createRoom = async () => {
     const timeLimit = parseInt(elements.timeLimit.value, 10);
     const numQuestions = parseInt(elements.numQuestions.value, 10);
     const host = elements.hostUsername.value.trim();
+    const gameType = elements.gameType.value.trim();
 
     hideError();
 
@@ -39,7 +41,12 @@ const createRoom = async () => {
     const response = await fetch("/api/createroom", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ timeLimit, numQuestions, hostUsername: host }),
+      body: JSON.stringify({
+        timeLimit,
+        numQuestions,
+        gameType,
+        hostUsername: host,
+      }),
     });
 
     if (!response.ok) {

@@ -6,6 +6,7 @@ let socket;
 
 const elements = {
   roomInfoTable: document.getElementById("room-details"),
+  playername: document.getElementById("username-value"),
   playerList: document.getElementById("player-list"),
   errorMessage: document.getElementById("error-message"),
   roomCode: document.getElementById("room-code-value"),
@@ -134,6 +135,20 @@ const fetchRoomDetails = async () => {
     populateRoomInfo(data);
     populatePlayerList(data.players);
     openWebSocketConnection();
+
+    const isHost = username === data.host;
+
+    const gameStartContainer = document.querySelector(".game-start");
+    const button = gameStartContainer.querySelector("button");
+    const message = gameStartContainer.querySelector("p");
+
+    if (isHost) {
+      button.classList.remove("hidden");
+      message.classList.add("hidden");
+    } else {
+      button.classList.add("hidden");
+      message.classList.remove("hidden");
+    }
   } catch (error) {
     showErrorModal(error.message);
   }
@@ -144,6 +159,7 @@ const initializeRoom = () => {
     askForUsername();
   } else {
     fetchRoomDetails();
+    elements.playername.textContent = username;
   }
 };
 
