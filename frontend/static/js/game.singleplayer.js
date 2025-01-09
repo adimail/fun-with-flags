@@ -3,7 +3,7 @@ import GameLogic from "./game.js";
 class SinglePlayerGameController {
   constructor() {
     this.elements = this.cacheElements();
-    this.gameLogic = new GameLogic();
+    this.funwithflags = new GameLogic();
     this.initEventListeners();
   }
 
@@ -52,8 +52,8 @@ class SinglePlayerGameController {
       const questions = await this.fetchQuestions(numQuestions, gameType);
 
       if (gameType === "MAP") {
-        this.gameLogic.loadMapCSSAndJS(() => {
-          this.gameLogic.initializeMap("map");
+        this.funwithflags.loadMapCSSAndJS(() => {
+          this.funwithflags.initializeMap("map");
         });
       }
 
@@ -110,13 +110,13 @@ class SinglePlayerGameController {
       this.toggleVisibility(this.elements.gameMCQ, true);
       this.toggleVisibility(this.elements.gameMap, false);
 
-      this.gameLogic.updateProgress(
+      this.funwithflags.updateProgress(
         this.elements.progressMCQ,
         currentIndex,
         totalQuestions,
       );
 
-      this.gameLogic.loadMCQQuestion(
+      this.funwithflags.loadMCQQuestion(
         this.elements.flag,
         this.elements.options,
         question,
@@ -126,13 +126,13 @@ class SinglePlayerGameController {
       this.toggleVisibility(this.elements.gameMCQ, false);
       this.toggleVisibility(this.elements.gameMap, true);
 
-      this.gameLogic.updateProgress(
+      this.funwithflags.updateProgress(
         this.elements.progressMap,
         currentIndex,
         totalQuestions,
       );
 
-      this.gameLogic.loadMapQuestion(
+      this.funwithflags.loadMapQuestion(
         this.elements.gameMap,
         this.elements.flagMap,
         question,

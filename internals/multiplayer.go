@@ -113,6 +113,7 @@ func createRoomHandler(w http.ResponseWriter, r *http.Request) {
 		Questions: make(map[string]*game.Question),
 		Start:     false,
 		TimeLimit: req.TimeLimit,
+		GameMode:  req.GameType,
 	}
 
 	for i, q := range questions {
@@ -130,6 +131,7 @@ func createRoomHandler(w http.ResponseWriter, r *http.Request) {
 		"start":        room.Start,
 		"timeLimit":    room.TimeLimit,
 		"numQuestions": len(questions),
+		"gamemode":     room.GameMode,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -155,10 +157,10 @@ func joinRoomHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate username
-	if req.Username == "" || len(req.Username) < 4 || len(req.Username) > 10 {
+	if req.Username == "" || len(req.Username) < 4 || len(req.Username) > 20 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{Error: "Username must be between 4 and 10 characters"})
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Username must be between 4 and 20 characters"})
 		return
 	}
 
@@ -240,6 +242,7 @@ func getRoomHandler(w http.ResponseWriter, r *http.Request) {
 		"players":      getSerializablePlayers(room),
 		"timeLimit":    room.TimeLimit,
 		"numQuestions": len(room.Questions),
+		"gamemode":     room.GameMode,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

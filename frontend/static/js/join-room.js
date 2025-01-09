@@ -22,7 +22,7 @@ const joinRoom = async () => {
 
     hideError();
 
-    if (!username || username.length < 4 || username.length > 10) {
+    if (!username || username.length < 4 || username.length > 20) {
       showError("Username must be between 4 and 10 characters.");
       return;
     }
@@ -45,5 +45,11 @@ const joinRoom = async () => {
     showError(error.message);
   }
 };
+
+const storedUsername = localStorage.getItem("username");
+
+if (storedUsername) {
+  elements.username.value = storedUsername;
+}
 
 elements.joinRoomBtn.addEventListener("click", joinRoom);

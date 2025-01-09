@@ -1,9 +1,16 @@
+import GameLogic from "./game.js";
+
 class MultiplayerGameController {
   constructor() {
     this.elements = this.cacheElements();
     this.username = localStorage.getItem("username");
     this.roomID = new URLSearchParams(window.location.search).get("id");
     this.socket = null;
+    this.funwithflags = new GameLogic();
+    this.currentquestionindex = 0;
+    this.currentquestion = null;
+    this.gametype = null;
+    this.totalquestions = 0;
 
     this.initEventListeners();
     this.initializeRoom();
@@ -11,20 +18,40 @@ class MultiplayerGameController {
 
   cacheElements() {
     return {
-      roomInfoTable: document.getElementById("room-details"),
-      playername: document.getElementById("username-value"),
-      playerList: document.getElementById("player-list"),
-      errorMessage: document.getElementById("error-message"),
+      // waiting room
+      waitingroom: document.getElementById("waiting-room"),
+
+      // room info table
       roomCode: document.getElementById("room-code-value"),
       hostName: document.getElementById("host-name-value"),
       numPlayers: document.getElementById("num-players-value"),
       numQuestions: document.getElementById("num-questions-value"),
+      gamemode: document.getElementById("gamemode-value"),
       timeLimit: document.getElementById("time-limit-value"),
+      playername: document.getElementById("username-value"),
+      playerList: document.getElementById("player-list"),
+
+      // modals and messages
+      errorMessage: document.getElementById("error-message"),
       modal: document.getElementById("question-modal"),
       modalUsernameInput: document.getElementById("username"),
       modalJoinButton: document.getElementById("join-room-btn"),
       errorModal: document.getElementById("room-error-modal"),
       errorModalMessage: document.getElementById("room-error-message"),
+
+      // Game elements
+      flag: document.getElementById("flag"),
+      options: document.getElementById("options"),
+      progressMCQ: document.getElementById("progress-mcq"),
+      progressMap: document.getElementById("progress-map"),
+      game: document.getElementById("game"),
+      gameModal: document.getElementById("game-modal"),
+      finalScore: document.getElementById("final-score"),
+      startGameBtn: document.getElementById("start-game-btn"),
+      gameMCQ: document.getElementById("game-mcq"),
+      gameMap: document.getElementById("game-map"),
+      flagMap: document.getElementById("flag-map"),
+      mapContainer: document.querySelector(".map-container"),
     };
   }
 
@@ -34,7 +61,7 @@ class MultiplayerGameController {
       if (
         !inputUsername ||
         inputUsername.length < 4 ||
-        inputUsername.length > 10
+        inputUsername.length > 20
       ) {
         this.showError("Username must be between 4 and 10 characters.");
         return;
@@ -47,20 +74,24 @@ class MultiplayerGameController {
     });
   }
 
+  toggleVisibility(element, visible) {
+    element.classList.toggle("hidden", !visible);
+  }
+
   showErrorModal(message) {
-    this.elements.roomInfoTable.classList.add("hidden");
+    this.elements.waitingroom.classList.add("hidden");
     this.elements.errorModalMessage.textContent = message;
     this.elements.errorModal.classList.remove("hidden");
   }
 
   showError(message) {
     this.elements.errorMessage.textContent = message;
-    this.elements.errorMessage.classList.remove("hidden");
+    this.toggleVisibility(this.elements.errorMessage, true);
   }
 
   hideError() {
     this.elements.errorMessage.textContent = "";
-    this.elements.errorMessage.classList.add("hidden");
+    this.toggleVisibility(this.elements.errorMessage, false);
   }
 
   askForUsername() {
@@ -77,6 +108,7 @@ class MultiplayerGameController {
     this.elements.numPlayers.textContent = data.players.length;
     this.elements.numQuestions.textContent = data.numQuestions;
     this.elements.timeLimit.textContent = data.timeLimit;
+    this.elements.gamemode.textContent = data.gamemode;
   }
 
   populatePlayerList(players) {
@@ -101,8 +133,12 @@ class MultiplayerGameController {
       }
 
       const data = await response.json();
+
       this.populateRoomInfo(data);
       this.populatePlayerList(data.players);
+      this.totalquestions = data.numQuestions;
+      this.elements.playername.textContent = this.username;
+      this.gametype = data.gamemode;
 
       const isHost = this.username === data.host;
       const gameStartContainer = document.querySelector(".game-start");
@@ -112,6 +148,9 @@ class MultiplayerGameController {
       if (isHost) {
         button.classList.remove("hidden");
         message.classList.add("hidden");
+        button.addEventListener("click", () => {
+          this.startGame();
+        });
       } else {
         button.classList.add("hidden");
         message.classList.remove("hidden");
@@ -126,8 +165,55 @@ class MultiplayerGameController {
       this.askForUsername();
     } else {
       this.fetchRoomDetails();
-      this.elements.playername.textContent = this.username;
     }
+  }
+
+  startGame() {
+    this.toggleVisibility(this.elements.waitingroom, false);
+    console.log("Host started the game");
+
+    const countdownSection = document.createElement("section");
+    countdownSection.className = "countdown-container";
+
+    const textElement = document.createElement("p");
+    textElement.textContent = "The game begins in";
+    countdownSection.appendChild(textElement);
+
+    const numberElement = document.createElement("h2");
+    numberElement.className = "countdown-number";
+    countdownSection.appendChild(numberElement);
+
+    document.body.appendChild(countdownSection);
+
+    // Countdown logic
+    let count = 3;
+    const countdownInterval = setInterval(() => {
+      if (count > 0) {
+        numberElement.textContent = count;
+        count--;
+      } else if (count === 0) {
+        numberElement.textContent = "START!";
+        count--;
+      } else {
+        clearInterval(countdownInterval);
+        countdownSection.remove();
+        console.log("Game began");
+      }
+    }, 1000);
+
+    //try {
+    //  this.toggleVisibility(this.elements.game, false);
+    //
+    //  if (this.gametype === "MAP") {
+    //    this.funwithflags.loadMapCSSAndJS(() => {
+    //      this.funwithflags.initializeMap("map");
+    //    });
+    //  }
+    //
+    //  this.toggleVisibility(this.elements.game, true);
+    //} catch {
+    //  this.showError("An error occurred while starting the game.");
+    //}
   }
 
   addPlayerToList(username) {

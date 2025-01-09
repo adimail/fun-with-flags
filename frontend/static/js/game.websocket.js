@@ -20,7 +20,7 @@ class WebSocketFunWithFlags {
         this.controller.updatePlayerCount();
         break;
       case "gameStarted":
-        console.log("Game started!");
+        this.controller.startGame(message.data);
         break;
       default:
         console.warn("Unhandled WebSocket event:", message.event);

@@ -32,7 +32,7 @@ const createRoom = async () => {
 
     hideError();
 
-    if (!host || host.length < 4 || host.length > 10) {
+    if (!host || host.length < 4 || host.length > 20) {
       showError("Username must be between 4 and 10 characters.");
       return;
     }
@@ -60,6 +60,12 @@ const createRoom = async () => {
     showError(error.message);
   }
 };
+
+const storedUsername = localStorage.getItem("username");
+
+if (storedUsername) {
+  elements.hostUsername.value = storedUsername;
+}
 
 elements.numQuestions.addEventListener("input", (e) =>
   handleRangeInput(e, elements.rangeValueQ),

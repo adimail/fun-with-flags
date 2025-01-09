@@ -41,7 +41,7 @@
       </div>
     </div>
 
-    <main id="room-details" class="waiting-room">
+    <main id="waiting-room" class="waiting-room">
       <table>
         <thead>
           <tr>
@@ -69,6 +69,10 @@
             <td id="num-players-value"></td>
           </tr>
           <tr>
+            <td>Game Mode</td>
+            <td id="gamemode-value"></td>
+          </tr>
+          <tr>
             <td>Number of Questions</td>
             <td id="num-questions-value"></td>
           </tr>
@@ -88,6 +92,26 @@
       <div class="game-start">
         <p>Waiting for the host to start the game...</p>
         <button type="button">Start game</button>
+      </div>
+    </main>
+
+    <main id="game" class="hidden">
+      <div id="game-mcq" class="hidden">
+        <p id="progress-mcq"></p>
+        <img id="flag" class="flag" src="" alt="Country Flag" />
+        <div id="options" class="options"></div>
+      </div>
+
+      <div id="game-map" class="hidden">
+        <div id="map" class="map-container"></div>
+        <img
+          id="flag-map"
+          class="flag map-flag"
+          src=""
+          alt="Country Flag"
+          draggable="false"
+        />
+        <p id="progress-map"></p>
       </div>
     </main>
 

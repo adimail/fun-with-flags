@@ -30,6 +30,7 @@ type Room struct {
 	Questions map[string]*Question
 	Start     bool
 	TimeLimit int // in seconds
+	GameMode  string
 	Mutex     sync.Mutex
 }
 
