@@ -12,11 +12,14 @@ class WebSocketFunWithFlags {
     const message = JSON.parse(event.data);
     switch (message.event) {
       case "playerJoined":
-        this.controller.addPlayerToList(message.data.username);
+        this.controller.addPlayerToList(message.data.username, message.data.id);
         this.controller.updatePlayerCount();
         break;
       case "playerLeft":
-        this.controller.removePlayerFromList(message.data.username);
+        this.controller.removePlayerFromList(
+          message.data.username,
+          message.data.id,
+        );
         this.controller.updatePlayerCount();
         break;
       case "gameStarted":

@@ -84,6 +84,7 @@ func getSerializablePlayers(room *game.Room) []map[string]interface{} {
 	for _, playerConn := range room.Players {
 		if playerConn != nil {
 			players = append(players, map[string]interface{}{
+				"id":       playerConn.ID,
 				"username": playerConn.Username,
 				"score":    playerConn.Score,
 			})

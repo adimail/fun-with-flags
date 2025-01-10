@@ -52,7 +52,31 @@ class MultiplayerGameController {
       gameMap: document.getElementById("game-map"),
       flagMap: document.getElementById("flag-map"),
       mapContainer: document.querySelector(".map-container"),
+
+      // Leaderboard
+      leaderboardIcon: document.querySelector(".leaderboard-icon"),
+      sidebar: document.querySelector(".sidebar"),
+      closeSidebarBtn: document.querySelector(".close-sidebar"),
+      leaderboardBody: document.getElementById("leaderboard-body"),
     };
+  }
+
+  toggleSidebar() {
+    this.elements.sidebar.classList.toggle("active");
+  }
+
+  renderLeaderboard(data) {
+    this.elements.leaderboardBody.innerHTML = data
+      .map(
+        (player) => `
+      <tr>
+        <td>${player.rank}</td>
+        <td>${player.name}</td>
+        <td>${player.score}</td>
+      </tr>
+    `,
+      )
+      .join("");
   }
 
   initEventListeners() {
@@ -71,6 +95,23 @@ class MultiplayerGameController {
       localStorage.setItem("username", this.username);
       this.closeModal();
       this.fetchRoomDetails();
+    });
+
+    this.elements.leaderboardIcon.addEventListener("click", () => {
+      this.toggleSidebar();
+    });
+    this.elements.closeSidebarBtn.addEventListener("click", () => {
+      this.toggleSidebar();
+    });
+
+    document.addEventListener("click", (e) => {
+      if (
+        !this.elements.sidebar.contains(e.target) &&
+        !this.elements.leaderboardIcon.contains(e.target) &&
+        this.elements.sidebar.classList.contains("active")
+      ) {
+        this.toggleSidebar();
+      }
     });
   }
 
@@ -118,6 +159,16 @@ class MultiplayerGameController {
       li.textContent = `${player.username}`;
       this.elements.playerList.appendChild(li);
     });
+
+    const leaderboardData = players
+      .sort((a, b) => (b.score || 0) - (a.score || 0))
+      .map((player, index) => ({
+        rank: index + 1,
+        name: player.username,
+        score: player.score || 0,
+      }));
+
+    this.renderLeaderboard(leaderboardData);
   }
 
   fetchRoomDetails = async () => {
@@ -216,16 +267,17 @@ class MultiplayerGameController {
     //}
   }
 
-  addPlayerToList(username) {
+  addPlayerToList(username, id) {
     const li = document.createElement("li");
     li.textContent = `${username}`;
+    li.setAttribute("data-id", id);
     this.elements.playerList.appendChild(li);
   }
 
-  removePlayerFromList(username) {
+  removePlayerFromList(username, id) {
     const items = Array.from(this.elements.playerList.children);
     items.forEach((li) => {
-      if (li.textContent === username) {
+      if (li.getAttribute("data-id") === id && li.textContent === username) {
         li.remove();
       }
     });

@@ -21,7 +21,12 @@ var (
 	roomsLock sync.Mutex
 )
 
-func generateroomID() string {
+func generateRoomID() string {
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	return strconv.Itoa(rng.Intn(10000))
+}
+
+func generatePlayerID() string {
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	return strconv.Itoa(rng.Intn(10000))
 }
@@ -105,7 +110,7 @@ func createRoomHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	roomID := generateroomID()
+	roomID := generateRoomID()
 	room := &game.Room{
 		Code:      roomID,
 		Hostname:  req.HostUsername,

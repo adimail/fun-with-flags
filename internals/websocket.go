@@ -51,6 +51,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	// Create a new player instance
 	player := &game.Player{
+		ID:       generatePlayerID(),
 		Username: initialMessage.Username,
 		Score:    0,
 		Conn:     conn,
@@ -67,6 +68,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		"data": map[string]interface{}{
 			"username": player.Username,
 			"score":    player.Score,
+			"id":       player.ID,
 		},
 	})
 
@@ -112,6 +114,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 				"data": map[string]interface{}{
 					"username": player.Username,
 					"score":    player.Score,
+					"id":       player.ID,
 				},
 			})
 		}
@@ -132,6 +135,7 @@ func removePlayerFromRoom(roomID string, room *game.Room, conn *websocket.Conn, 
 		"event": "playerLeft",
 		"data": map[string]interface{}{
 			"username": player.Username,
+			"id":       player.ID,
 		},
 	})
 
@@ -141,7 +145,7 @@ func removePlayerFromRoom(roomID string, room *game.Room, conn *websocket.Conn, 
 		delete(rooms, roomID)
 		roomsLock.Unlock()
 
-		log.Printf("Room %s is empty and has been closed.", roomID)
+		log.Printf("Room %s has been closed.", roomID)
 	}
 }
 

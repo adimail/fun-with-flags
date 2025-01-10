@@ -35,7 +35,7 @@
 
         <div class="modal-actions">
           <a href="/createroom" class="action-btn">Create Room</a>
-          <a href="/createroom" class="action-btn">Join Room</a>
+          <a href="/joinroom" class="action-btn">Join Room</a>
           <a href="/" class="action-btn">Home</a>
         </div>
       </div>
@@ -115,9 +115,31 @@
       </div>
     </main>
 
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h2>Leaderboard</h2>
+        <button class="close-sidebar">&times;</button>
+      </div>
+      <div class="leaderboard-content">
+        <table class="leaderboard-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Name</th>
+              <th>Score</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-body">
+            <!-- Will be populated -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <footer>
       <a href="/">Home</a>
       <button onclick="toggleTheme()">Toggle Theme</button>
+      <button class="leaderboard-icon">Leaderboard</button>
     </footer>
 
     <script type="module" src="/static/js/game.multiplayer.js"></script>
