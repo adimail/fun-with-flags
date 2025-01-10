@@ -51,12 +51,24 @@
     var map;
     var vectorSource;
     var highlightSource;
+    var featuresLoaded = false;
 
     function init() {
       vectorSource = new ol.source.Vector({
-        url: "https://raw.githubusercontent.com/adimail/fun-with-flags/refs/heads/master/frontend/static/countries.geo.json",
         format: new ol.format.GeoJSON(),
       });
+
+      fetch(
+        "https://raw.githubusercontent.com/adimail/fun-with-flags/refs/heads/master/frontend/static/countries.geo.json",
+      )
+        .then((response) => response.json())
+        .then((data) => {
+          const features = vectorSource.getFormat().readFeatures(data, {
+            featureProjection: "EPSG:3857",
+          });
+          vectorSource.addFeatures(features);
+          featuresLoaded = true;
+        });
 
       vectorLayer = new ol.layer.Vector({
         source: vectorSource,
@@ -69,6 +81,9 @@
             color: "rgba(100, 200, 255, 0.6)",
           }),
         }),
+        updateWhileAnimating: true,
+        updateWhileInteracting: true,
+        renderBuffer: 200,
       });
 
       highlightSource = new ol.source.Vector();
@@ -101,6 +116,9 @@
           maxZoom: 5,
           extent: extent,
         }),
+        pixelRatio: 1,
+        loadTilesWhileAnimating: true,
+        loadTilesWhileInteracting: true,
       });
 
       var tooltip = document.createElement("div");
@@ -109,6 +127,8 @@
       document.body.appendChild(tooltip);
 
       map.on("pointermove", function (event) {
+        if (!featuresLoaded) return;
+
         highlightSource.clear();
         tooltip.style.display = "none";
 
@@ -116,7 +136,6 @@
           var geometry = feature.getGeometry();
           var clonedFeature = feature.clone();
           clonedFeature.setGeometry(geometry);
-
           highlightSource.addFeature(clonedFeature);
 
           var countryName = feature.get("name");
@@ -136,5 +155,11 @@
     }
 
     init();
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") {
+        window.location.href = "/";
+      }
+    });
   </script>
 </html>

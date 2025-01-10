@@ -91,3 +91,7 @@ func getSerializablePlayers(room *game.Room) []map[string]interface{} {
 	}
 	return players
 }
+
+func calculateScore(answers int, totalquestions int, submissiontime int, totaltime int) int {
+	return answers * totalquestions * (submissiontime / totaltime)
+}

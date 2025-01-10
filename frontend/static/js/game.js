@@ -5,6 +5,7 @@ class GameLogic {
     this.markerAddingDisabled = false;
     this.currentQuestion = null;
     this.currentCallback = null;
+    this.featuresLoaded = false;
   }
 
   loadMapCSSAndJS(callback) {
@@ -21,10 +22,22 @@ class GameLogic {
 
   initializeMap(targetId) {
     this.makeImageDraggable();
+
     this.vectorSource = new ol.source.Vector({
-      url: "https://raw.githubusercontent.com/adimail/fun-with-flags/refs/heads/master/frontend/static/countries.geo.json",
       format: new ol.format.GeoJSON(),
     });
+
+    fetch(
+      "https://raw.githubusercontent.com/adimail/fun-with-flags/refs/heads/master/frontend/static/countries.geo.json",
+    )
+      .then((response) => response.json())
+      .then((data) => {
+        const features = this.vectorSource.getFormat().readFeatures(data, {
+          featureProjection: "EPSG:3857",
+        });
+        this.vectorSource.addFeatures(features);
+        this.featuresLoaded = true;
+      });
 
     const vectorLayer = new ol.layer.Vector({
       source: this.vectorSource,
@@ -37,6 +50,9 @@ class GameLogic {
           color: "rgba(173, 216, 230, 0.6)",
         }),
       }),
+      updateWhileAnimating: true,
+      updateWhileInteracting: true,
+      renderBuffer: 200,
     });
 
     const highlightSource = new ol.source.Vector();
@@ -69,12 +85,15 @@ class GameLogic {
         maxZoom: 5,
         extent: extent,
       }),
+      pixelRatio: 1,
+      loadTilesWhileAnimating: true,
+      loadTilesWhileInteracting: true,
     });
 
     let disableHover = false;
 
     this.map.on("pointermove", (event) => {
-      if (disableHover) return;
+      if (disableHover || !this.featuresLoaded) return;
       highlightSource.clear();
       this.map.forEachFeatureAtPixel(event.pixel, (feature) => {
         const geometry = feature.getGeometry();
