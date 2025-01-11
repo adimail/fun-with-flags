@@ -273,7 +273,7 @@ class MultiplayerGameController {
     }
     this.socket.send(
       JSON.stringify({
-        event: "new_question",
+        event: "get_new_question",
         data: {
           roomID: this.roomID,
           playerID: this.username,
@@ -284,7 +284,7 @@ class MultiplayerGameController {
   }
 
   // send from game controller
-  sendAnswer(question, answer, playerid) {
+  validateAnswer(question, answer, playerid) {
     if (!question || typeof question !== "string") {
       console.error("Invalid question ID.");
       return;
@@ -296,7 +296,7 @@ class MultiplayerGameController {
 
     this.socket.send(
       JSON.stringify({
-        event: "send_answer",
+        event: "validate_answer",
         data: {
           roomID: this.roomID,
           question: question,

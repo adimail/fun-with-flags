@@ -1,6 +1,7 @@
 package internals
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -29,7 +30,8 @@ var upgrader = websocket.Upgrader{
 // It enforces a maximum of 9 players per room and manages the following events:
 //   - "leave": Handle explicit player departure
 //   - "loadgame": Initialize game countdown and start
-//   - "updateScore": Update and broadcast a player's score change
+//   - "get_new_question": Send a new question to the requesting player
+//   - "validate_answer": Validate a submitted answer and send the response to the player, broadcasting score updates if correct
 //
 // Parameters:
 //   - w: The HTTP response writer
@@ -130,25 +132,82 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 				"event": "gameStarted",
 			})
 
-		case "updateScore":
-			newScore, ok := message.Data.(float64)
-			if !ok {
-				log.Println("Invalid score format")
+		case "get_new_question":
+			var data struct {
+				RoomID         string `json:"roomID"`
+				PlayerID       string `json:"playerID"`
+				QuestionNumber int    `json:"question_number"`
+			}
+
+			err := json.Unmarshal(message.Data.([]byte), &data)
+			if err != nil {
+				log.Println("Error unmarshaling data for get_new_question:", err)
 				continue
 			}
-			room.Mutex.Lock()
-			player.Score = int(newScore)
-			room.Mutex.Unlock()
 
-			// Notify all players of the score update
-			broadcastToRoom(room, map[string]interface{}{
-				"event": "scoreUpdated",
-				"data": map[string]interface{}{
-					"username": player.Username,
-					"score":    player.Score,
-					"id":       player.ID,
-				},
-			})
+			question, err := getQuestion(room, data.QuestionNumber)
+			if err != nil {
+				log.Println("Failed to get question:", err)
+				conn.WriteJSON(map[string]string{"error": "Failed to get question"})
+				continue
+			}
+
+			if err := sendToPlayer(room, data.PlayerID, map[string]interface{}{"event": "new_question", "data": question}); err != nil {
+				log.Println("Error sending question to player:", err)
+				continue
+			}
+
+		case "validate_answer":
+			var data struct {
+				RoomID   string `json:"roomID"`
+				Question string `json:"question"`
+				Answer   string `json:"answer"`
+				PlayerID string `json:"playerID"`
+			}
+
+			err := json.Unmarshal(message.Data.([]byte), &data)
+			if err != nil {
+				log.Println("Error unmarshaling data for validate_answer:", err)
+				conn.WriteJSON(map[string]string{"error": "Error processing request"})
+				continue
+			}
+
+			questionIndex := 1
+			found := false
+			for _, question := range room.Questions {
+				if question.Answer == data.Question {
+					questionIndex += 1
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				conn.WriteJSON(map[string]string{"error": "Question not found"})
+				continue
+			}
+
+			response, err := validateAnswer(room, questionIndex, data.Answer)
+			if err != nil {
+				log.Println("Error validating answer:", err)
+				conn.WriteJSON(map[string]string{"error": "Error validating answer"})
+				continue
+			}
+
+			if err := sendToPlayer(room, data.PlayerID, response); err != nil {
+				log.Println("Error sending validation response to player:", err)
+				continue
+			}
+
+			if response["answer"] == response["correct"] {
+				player.Score++
+				broadcastToRoom(room, map[string]interface{}{
+					"event": "score",
+					"data": map[string]interface{}{
+						"username": player.Username,
+					},
+				})
+			}
 		}
 	}
 
@@ -268,6 +327,18 @@ func sendToPlayer(room *game.Room, playerID string, message interface{}) error {
 	return nil
 }
 
+// getQuestion retrieves a specific question from a game room.
+//
+// It takes the following arguments:
+//   - room: Pointer to the game.Room struct representing the game room
+//   - questionNumber: The index of the question to retrieve (zero-based)
+//
+// The function returns a pointer to the requested question struct and an error if:
+//   - The provided room pointer is nil
+//   - The room has no questions
+//   - The question number is negative
+//   - The question number is out of range (greater than or equal to the total number of questions)
+//   - The question with the specified number is not found in the room
 func getQuestion(room *game.Room, questionNumber int) (*game.Question, error) {
 	if room == nil {
 		return nil, fmt.Errorf("room is nil")
@@ -294,6 +365,19 @@ func getQuestion(room *game.Room, questionNumber int) (*game.Question, error) {
 	return nil, fmt.Errorf("question with number %d not found", questionNumber)
 }
 
+// validateAnswer checks if a user's answer to a question is correct.
+//
+// It takes the following arguments:
+//   - room: Pointer to the game.Room struct representing the game room
+//   - questionIndex: The index of the question the answer is for (zero-based)
+//   - userAnswer: The answer submitted by the user
+//
+// The function returns a map containing the user's answer and the correct answer, and an error if:
+//   - The provided room pointer is nil
+//   - The room has no questions
+//   - The question index is negative
+//   - The question index is out of range (greater than or equal to the total number of questions)
+//   - The question with the specified index is not found in the room
 func validateAnswer(room *game.Room, questionIndex int, userAnswer string) (map[string]interface{}, error) {
 	if room == nil {
 		return nil, fmt.Errorf("room is nil")
@@ -318,15 +402,8 @@ func validateAnswer(room *game.Room, questionIndex int, userAnswer string) (map[
 	}
 
 	response := map[string]interface{}{
-		"status":  "",
 		"answer":  userAnswer,
 		"correct": question.Answer,
-	}
-
-	if userAnswer == question.Answer {
-		response["status"] = "pass"
-	} else {
-		response["status"] = "fail"
 	}
 
 	return response, nil
