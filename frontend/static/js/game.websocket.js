@@ -5,7 +5,7 @@ class WebSocketFunWithFlags {
     this.controller = controller;
     this.socket = null;
 
-    this.openWebSocketConnection();
+    this.controller.socket = this.openWebSocketConnection();
   }
 
   handleWebSocketMessage(event) {
@@ -22,19 +22,52 @@ class WebSocketFunWithFlags {
         );
         this.controller.updatePlayerCount();
         break;
+      case "countdown":
+        this.controller.hidewaitingroom();
+        this.renderCountdown(message.data);
+        break;
       case "gameStarted":
-        this.controller.startGame(message.data);
+        console.log("Game started");
+        this.controller.startGame();
         break;
       default:
         console.warn("Unhandled WebSocket event:", message.event);
     }
   }
 
-  openWebSocketConnection() {
-    this.socket = new WebSocket("ws://localhost:8080/ws");
+  renderCountdown(count) {
+    const countdownSection =
+      document.querySelector(".countdown-container") ||
+      document.createElement("section");
 
-    this.socket.onopen = () => {
-      this.socket.send(
+    if (!document.body.contains(countdownSection)) {
+      countdownSection.className = "countdown-container";
+      const textElement = document.createElement("p");
+      textElement.textContent = "The game begins in";
+      countdownSection.appendChild(textElement);
+
+      const numberElement = document.createElement("h2");
+      numberElement.className = "countdown-number";
+      countdownSection.appendChild(numberElement);
+
+      document.body.appendChild(countdownSection);
+    }
+
+    const numberElement = countdownSection.querySelector(".countdown-number");
+    if (count === 0) {
+      numberElement.textContent = "START!";
+      setTimeout(() => countdownSection.remove(), 1000);
+    } else {
+      numberElement.textContent = count;
+    }
+  }
+
+  openWebSocketConnection() {
+    const socket = new WebSocket("ws://localhost:8080/ws");
+
+    socket.onopen = () => {
+      console.log("WebSocket connection established.");
+      socket.send(
         JSON.stringify({
           event: "joinRoom",
           username: this.username,
@@ -43,18 +76,20 @@ class WebSocketFunWithFlags {
       );
     };
 
-    this.socket.onmessage = this.handleWebSocketMessage.bind(this);
+    socket.onmessage = this.handleWebSocketMessage.bind(this);
 
-    this.socket.onerror = (error) => {
+    socket.onerror = (error) => {
       this.controller.showErrorModal(
         "WebSocket error occurred. Please refresh the page.",
       );
       console.error("WebSocket error:", error);
     };
 
-    this.socket.onclose = () => {
+    socket.onclose = () => {
       console.log("WebSocket connection closed.");
     };
+
+    return socket;
   }
 }
 

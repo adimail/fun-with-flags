@@ -3,6 +3,7 @@ package internals
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/adimail/fun-with-flags/internals/game"
 	"github.com/gorilla/websocket"
@@ -96,6 +97,23 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Player %s left the room", player.Username)
 			removePlayerFromRoom(initialMessage.RoomID, room, conn, player)
 			return // End WebSocket loop for this player
+
+		case "loadgame":
+			for i := 3; i >= 0; i-- {
+				broadcastToRoom(room, map[string]interface{}{
+					"event": "countdown",
+					"data":  i,
+				})
+				time.Sleep(1 * time.Second)
+			}
+
+			room.Mutex.Lock()
+			room.Start = true
+			room.Mutex.Unlock()
+
+			broadcastToRoom(room, map[string]interface{}{
+				"event": "gameStarted",
+			})
 
 		case "updateScore":
 			// Update player's score

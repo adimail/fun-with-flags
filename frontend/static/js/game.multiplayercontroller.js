@@ -11,6 +11,8 @@ class MultiplayerGameController {
     this.currentquestion = null;
     this.gametype = null;
     this.totalquestions = 0;
+    this.gamestarted = false;
+    this.ishost = false;
 
     this.initEventListeners();
     this.initializeRoom();
@@ -197,10 +199,11 @@ class MultiplayerGameController {
       const message = gameStartContainer.querySelector("p");
 
       if (isHost) {
+        this.ishost = true;
         button.classList.remove("hidden");
         message.classList.add("hidden");
         button.addEventListener("click", () => {
-          this.startGame();
+          this.loadgame();
         });
       } else {
         button.classList.add("hidden");
@@ -219,52 +222,42 @@ class MultiplayerGameController {
     }
   }
 
-  startGame() {
+  hidewaitingroom() {
     this.toggleVisibility(this.elements.waitingroom, false);
+  }
+
+  loadgame() {
+    if (!this.ishost) {
+      alert("Only the game host can start the game, you are not the host.");
+      return;
+    }
+
+    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+      console.error("WebSocket is not open. Cannot start the game.");
+      return;
+    }
+
+    this.hidewaitingroom();
+
     console.log("Host started the game");
+    this.gamestarted = true;
 
-    const countdownSection = document.createElement("section");
-    countdownSection.className = "countdown-container";
+    this.socket.send(JSON.stringify({ event: "loadgame" }));
+  }
 
-    const textElement = document.createElement("p");
-    textElement.textContent = "The game begins in";
-    countdownSection.appendChild(textElement);
-
-    const numberElement = document.createElement("h2");
-    numberElement.className = "countdown-number";
-    countdownSection.appendChild(numberElement);
-
-    document.body.appendChild(countdownSection);
-
-    // Countdown logic
-    let count = 3;
-    const countdownInterval = setInterval(() => {
-      if (count > 0) {
-        numberElement.textContent = count;
-        count--;
-      } else if (count === 0) {
-        numberElement.textContent = "START!";
-        count--;
-      } else {
-        clearInterval(countdownInterval);
-        countdownSection.remove();
-        console.log("Game began");
+  startGame() {
+    try {
+      if (this.gametype === "MAP") {
+        this.funwithflags.loadMapCSSAndJS(() => {
+          this.funwithflags.initializeMap("map");
+        });
       }
-    }, 1000);
 
-    //try {
-    //  this.toggleVisibility(this.elements.game, false);
-    //
-    //  if (this.gametype === "MAP") {
-    //    this.funwithflags.loadMapCSSAndJS(() => {
-    //      this.funwithflags.initializeMap("map");
-    //    });
-    //  }
-    //
-    //  this.toggleVisibility(this.elements.game, true);
-    //} catch {
-    //  this.showError("An error occurred while starting the game.");
-    //}
+      this.toggleVisibility(this.elements.game, true);
+      console.log("Game rendered. You can play now...");
+    } catch {
+      this.showError("An error occurred while starting the game.");
+    }
   }
 
   addPlayerToList(username, id) {
