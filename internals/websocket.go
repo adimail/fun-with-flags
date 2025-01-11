@@ -1,8 +1,10 @@
 package internals
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/adimail/fun-with-flags/internals/game"
@@ -15,6 +17,25 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
+// HandleWebSocket manages WebSocket connections for a multiplayer game room.
+// It handles the initial connection setup, player registration, and ongoing
+// communication between players in a room. The function supports various game
+// events including player joins, answers, score updates, and departures.
+//
+// The function expects an initial message containing:
+//   - Username: The display name of the connecting player
+//   - RoomID: The unique identifier of the game room to join
+//
+// It enforces a maximum of 9 players per room and manages the following events:
+//   - "leave": Handle explicit player departure
+//   - "loadgame": Initialize game countdown and start
+//   - "updateScore": Update and broadcast a player's score change
+//
+// Parameters:
+//   - w: The HTTP response writer
+//   - r: The HTTP request containing the WebSocket upgrade request
+//
+// The connection is automatically closed when the function returns.
 func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -82,21 +103,15 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 		err := conn.ReadJSON(&message)
 		if err != nil {
-			// Log player disconnection as an info message
 			log.Printf("WebSocket connection closed for player %s: %v", player.Username, err)
 			break
 		}
 
 		switch message.Event {
-		case "answer":
-			// Handle answer submission
-			handleAnswer(room, player, message.Data)
-
 		case "leave":
-			// Handle player leaving explicitly
 			log.Printf("Player %s left the room", player.Username)
 			removePlayerFromRoom(initialMessage.RoomID, room, conn, player)
-			return // End WebSocket loop for this player
+			return
 
 		case "loadgame":
 			for i := 3; i >= 0; i-- {
@@ -116,7 +131,6 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			})
 
 		case "updateScore":
-			// Update player's score
 			newScore, ok := message.Data.(float64)
 			if !ok {
 				log.Println("Invalid score format")
@@ -138,10 +152,24 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Handle implicit player leaving due to WebSocket disconnection
 	removePlayerFromRoom(initialMessage.RoomID, room, conn, player)
 }
 
+// removePlayerFromRoom removes a player from a game room and performs necessary cleanup.
+// It handles both explicit departures and implicit disconnections. If the room becomes
+// empty after removal, it will also delete the room from the global rooms map.
+//
+// Parameters:
+//   - roomID: The unique identifier of the room
+//   - room: Pointer to the Room instance
+//   - conn: The WebSocket connection to be removed
+//   - player: The Player instance to be removed
+//
+// The function performs the following operations:
+//   - Removes the player from the room's Players map
+//   - Notifies remaining players about the departure
+//   - Cleans up empty rooms
+//   - Handles thread-safe access to shared resources
 func removePlayerFromRoom(roomID string, room *game.Room, conn *websocket.Conn, player *game.Player) {
 	room.Mutex.Lock()
 	delete(room.Players, conn)
@@ -167,6 +195,19 @@ func removePlayerFromRoom(roomID string, room *game.Room, conn *websocket.Conn, 
 	}
 }
 
+// broadcastToRoom sends a message to all players in a specified room.
+// It safely handles concurrent access to the room's player list and manages
+// failed message deliveries by removing disconnected players.
+//
+// Parameters:
+//   - room: Pointer to the Room instance
+//   - message: The message to broadcast (will be JSON encoded)
+//
+// The function:
+//   - Acquires the room mutex to ensure thread-safe access
+//   - Attempts to send the message to each connected player
+//   - Handles failed sends by closing connections and removing players
+//   - Uses deferred mutex unlock to prevent deadlocks
 func broadcastToRoom(room *game.Room, message interface{}) {
 	room.Mutex.Lock()
 	defer room.Mutex.Unlock()
@@ -180,7 +221,113 @@ func broadcastToRoom(room *game.Room, message interface{}) {
 	}
 }
 
-func handleAnswer(room *game.Room, player *game.Player, data interface{}) {
-	log.Printf("Player %s from room %s submitted an answer: %v", player.Username, room.Code, data)
-	// Logic to handle and evaluate the answer
+// sendToPlayer sends a message to a specific player in a room.
+// It provides targeted communication instead of broadcasting to all players.
+// The function handles thread-safe access and connection cleanup if needed.
+//
+// Parameters:
+//   - room: Pointer to the Room instance
+//   - playerID: The unique identifier of the target player
+//   - message: The message to send (will be JSON encoded)
+//
+// Returns:
+//   - error: nil if successful, error if player not found or message send fails
+//
+// The function:
+//   - Safely accesses the room's player list
+//   - Locates the specific player by ID
+//   - Handles message delivery failures
+//   - Cleans up failed connections
+//   - Provides detailed error information
+func sendToPlayer(room *game.Room, playerID string, message interface{}) error {
+	room.Mutex.Lock()
+	defer room.Mutex.Unlock()
+
+	var targetConn *websocket.Conn
+	var targetPlayer *game.Player
+
+	for conn, player := range room.Players {
+		if player.ID == playerID {
+			targetConn = conn
+			targetPlayer = player
+			break
+		}
+	}
+
+	if targetConn == nil {
+		return fmt.Errorf("player with ID %s not found in room", playerID)
+	}
+
+	if err := targetConn.WriteJSON(message); err != nil {
+		log.Printf("Error sending message to player %s: %v", targetPlayer.Username, err)
+		targetConn.Close()
+		delete(room.Players, targetConn)
+		return err
+	}
+
+	return nil
+}
+
+func getQuestion(room *game.Room, questionNumber int) (*game.Question, error) {
+	if room == nil {
+		return nil, fmt.Errorf("room is nil")
+	}
+
+	if room.Questions == nil {
+		return nil, fmt.Errorf("no questions found in the room")
+	}
+
+	if questionNumber < 0 {
+		return nil, fmt.Errorf("question number must be non-negative")
+	}
+
+	if questionNumber >= len(room.Questions) {
+		return nil, fmt.Errorf("question number %d is out of range; total questions available: %d", questionNumber, len(room.Questions))
+	}
+
+	questionKey := strconv.Itoa(questionNumber)
+
+	if question, exists := room.Questions[questionKey]; exists {
+		return question, nil
+	}
+
+	return nil, fmt.Errorf("question with number %d not found", questionNumber)
+}
+
+func validateAnswer(room *game.Room, questionIndex int, userAnswer string) (map[string]interface{}, error) {
+	if room == nil {
+		return nil, fmt.Errorf("room is nil")
+	}
+
+	if room.Questions == nil {
+		return nil, fmt.Errorf("no questions found in the room")
+	}
+
+	if questionIndex < 0 {
+		return nil, fmt.Errorf("question index must be non-negative")
+	}
+
+	if questionIndex >= len(room.Questions) {
+		return nil, fmt.Errorf("question index %d is out of range; total questions available: %d", questionIndex, len(room.Questions))
+	}
+
+	questionKey := strconv.Itoa(questionIndex)
+	question, exists := room.Questions[questionKey]
+	if !exists {
+		return nil, fmt.Errorf("question with index %d not found", questionIndex)
+	}
+
+	response := map[string]interface{}{
+		"status":  "",
+		"answer":  userAnswer,
+		"correct": question.Answer,
+	}
+
+	if userAnswer == question.Answer {
+		response["status"] = "pass"
+	} else {
+		response["status"] = "fail"
+	}
+
+	return response, nil
 }

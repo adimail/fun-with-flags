@@ -12,6 +12,7 @@ class MultiplayerGameController {
     this.gametype = null;
     this.totalquestions = 0;
     this.gamestarted = false;
+    this.gameended = false;
     this.ishost = false;
 
     this.initEventListeners();
@@ -258,6 +259,52 @@ class MultiplayerGameController {
     } catch {
       this.showError("An error occurred while starting the game.");
     }
+  }
+
+  // send from websocketclient
+  requestQuestion(questionNumber) {
+    if (
+      typeof questionNumber !== "number" ||
+      questionNumber < 1 ||
+      questionNumber > this.totalquestions
+    ) {
+      console.error("Invalid question number.");
+      return;
+    }
+    this.socket.send(
+      JSON.stringify({
+        event: "new_question",
+        data: {
+          roomID: this.roomID,
+          playerID: this.username,
+          question_number: questionNumber,
+        },
+      }),
+    );
+  }
+
+  // send from game controller
+  sendAnswer(question, answer, playerid) {
+    if (!question || typeof question !== "string") {
+      console.error("Invalid question ID.");
+      return;
+    }
+    if (!answer || typeof answer !== "string") {
+      console.error("Invalid Answer.");
+      return;
+    }
+
+    this.socket.send(
+      JSON.stringify({
+        event: "send_answer",
+        data: {
+          roomID: this.roomID,
+          question: question,
+          answer: answer,
+          playerid: playerid,
+        },
+      }),
+    );
   }
 
   addPlayerToList(username, id) {

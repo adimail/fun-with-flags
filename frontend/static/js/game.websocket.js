@@ -29,6 +29,16 @@ class WebSocketFunWithFlags {
       case "gameStarted":
         console.log("Game started");
         this.controller.startGame();
+        this.requestQuestion(1);
+        break;
+      case "new_question":
+        this.controller.displayQuestion(message.data);
+        break;
+      case "answer_result":
+        this.controller.handleAnswer(message.data);
+        break;
+      case "broadcast_ans":
+        this.controller.broadcastPlayerAnswer(message.data);
         break;
       default:
         console.warn("Unhandled WebSocket event:", message.event);
