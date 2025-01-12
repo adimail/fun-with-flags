@@ -1,7 +1,6 @@
 package internals
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -133,17 +132,23 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			})
 
 		case "get_new_question":
-			var data struct {
-				QuestionNumber int `json:"question_number"`
-			}
+			var questionNumber int
 
-			err := json.Unmarshal(message.Data.([]byte), &data)
-			if err != nil {
-				log.Println("Error unmarshaling data for get_new_question:", err)
+			if dataMap, ok := message.Data.(map[string]interface{}); ok {
+				if questionNumberFloat, ok := dataMap["question_number"].(float64); ok {
+					questionNumber = int(questionNumberFloat)
+				} else {
+					log.Println("Invalid question_number type")
+					conn.WriteJSON(map[string]string{"error": "Invalid question number"})
+					continue
+				}
+			} else {
+				log.Println("Invalid data format for get_new_question")
+				conn.WriteJSON(map[string]string{"error": "Invalid data format"})
 				continue
 			}
 
-			question, err := getQuestion(room, data.QuestionNumber)
+			question, err := getQuestion(room, questionNumber)
 			if err != nil {
 				log.Println("Failed to get question:", err)
 				conn.WriteJSON(map[string]string{"error": "Failed to get question"})
@@ -159,66 +164,65 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			}
 
 		case "validate_answer":
-			var data struct {
-				RoomID   string `json:"roomID"`
-				Question string `json:"question"`
-				Answer   string `json:"answer"`
-				PlayerID string `json:"playerID"`
-			}
-
-			err := json.Unmarshal(message.Data.([]byte), &data)
-			if err != nil {
-				log.Println("Error unmarshaling data for validate_answer:", err)
-				conn.WriteJSON(map[string]string{"error": "Error processing request"})
+			var rawData map[string]interface{}
+			rawData, ok := message.Data.(map[string]interface{})
+			if !ok {
+				log.Println("Invalid data type for validate_answer")
+				conn.WriteJSON(map[string]string{"error": "Invalid data format"})
 				continue
 			}
 
-			questionIndex := 1
-			found := false
-			for _, question := range room.Questions {
-				if question.Answer == data.Question {
-					questionIndex += 1
-					found = true
-					break
-				}
-			}
+			data := struct {
+				QuestionIndex int    `json:"question_index"`
+				Answer        string `json:"answer"`
+			}{}
 
-			if !found {
-				conn.WriteJSON(map[string]string{"error": "Question not found"})
+			if questionIndex, ok := rawData["question_index"].(float64); ok {
+				data.QuestionIndex = int(questionIndex)
+			} else {
+				conn.WriteJSON(map[string]string{"error": "Invalid question index"})
 				continue
 			}
 
-			response, err := validateAnswer(room, questionIndex, data.Answer)
-			if err != nil {
-				log.Println("Error validating answer:", err)
-				conn.WriteJSON(map[string]string{"error": "Error validating answer"})
+			if answer, ok := rawData["answer"].(string); ok {
+				data.Answer = answer
+			} else {
+				conn.WriteJSON(map[string]string{"error": "Invalid answer"})
 				continue
 			}
+
+			if data.QuestionIndex < 0 || data.QuestionIndex >= len(room.Questions) {
+				conn.WriteJSON(map[string]string{"error": "Invalid question index"})
+				continue
+			}
+
+			question := room.Questions[strconv.Itoa(data.QuestionIndex)]
+			isCorrect := question.Answer == data.Answer
 
 			messageResponse := map[string]interface{}{
 				"event": "answer_result",
 				"data": map[string]interface{}{
-					"correct_answer": response["correct"],
-					"chosen_answer":  response["answer"],
+					"correct_answer": question.Answer,
+					"chosen_answer":  data.Answer,
 				},
 			}
 
-			if data.PlayerID == player.ID {
-				err := conn.WriteJSON(messageResponse)
-				if err != nil {
-					log.Println("Error sending validation response to player:", err)
-				}
+			err := conn.WriteJSON(messageResponse)
+			if err != nil {
+				log.Println("Error sending validation response to player:", err)
 			}
 
-			if response["answer"] == response["correct"] {
+			if isCorrect {
 				player.Score++
 				broadcastToRoom(room, map[string]interface{}{
 					"event": "score",
 					"data": map[string]interface{}{
 						"username": player.Username,
+						"score":    player.Score,
 					},
 				})
 			}
+
 		}
 	}
 
@@ -386,7 +390,7 @@ func getQuestion(room *game.Room, questionNumber int) (map[string]interface{}, e
 		"flag_url": question.FlagURL,
 	}
 
-	if room.GameMode == "mcq" {
+	if room.GameMode == "MCQ" {
 		data["options"] = question.Options
 	}
 

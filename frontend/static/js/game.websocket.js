@@ -26,10 +26,11 @@ class WebSocketFunWithFlags {
       case "gameStarted":
         console.log("Game started");
         this.controller.startGame();
-        this.requestQuestion(1);
+        this.controller.requestQuestion(0);
         break;
       case "new_question":
         this.controller.updateCurrentQuestion(message.data);
+        this.controller.loadQuestion();
         break;
       case "answer_result":
         this.controller.verifyAnswer(message.data);

@@ -15,6 +15,7 @@ class MultiplayerGameController {
 
     this.gamePlayers = {}; // Structure: { playerId: { name, score } }
     this.currentQuestion = {}; // Structure: {type: "map/mcq", options = [], flag_url }
+    this.currentQuestionIndex = 0;
 
     this.initEventListeners();
     this.initializeRoom();
@@ -182,9 +183,6 @@ class MultiplayerGameController {
       }
 
       this.toggleVisibility(this.elements.game, true);
-      console.log("Game rendered. You can play now...");
-
-      this.runGame(this.elements.numQuestions, this.gametype);
     } catch {
       this.showError("An error occurred while starting the game.");
     }
@@ -196,94 +194,51 @@ class MultiplayerGameController {
     this.updateLeaderboard();
   }
 
-  runGame() {
-    let currentQuestionIndex = 0;
-    let score = 0;
-
-    const nextQuestion = (correct) => {
-      if (correct) score++;
-      if (++currentQuestionIndex < this.totalquestions) {
-        this.loadQuestion(
-          currentQuestionIndex,
-          this.totalquestions,
-          nextQuestion,
-          this.gametype,
-        );
-      } else {
-        this.endGame();
-      }
-    };
-
-    this.loadQuestion(
-      currentQuestionIndex,
-      this.totalquestions,
-      nextQuestion,
-      this.gametype,
-    );
+  shuffleOptions(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
   }
 
-  loadQuestion(currentIndex, totalQuestions, callback, gameType) {
-    if (gameType === "MCQ") {
+  loadQuestion() {
+    if (
+      !this.currentQuestion.flag_url ||
+      !Array.isArray(this.currentQuestion.options)
+    ) {
+      console.error("Invalid question data.");
+      console.log(this.currentQuestion);
+      return;
+    }
+
+    if (this.gametype === "MCQ") {
       this.toggleVisibility(this.elements.gameMCQ, true);
       this.toggleVisibility(this.elements.gameMap, false);
 
-      this.funwithflags.updateProgress(
-        this.elements.progressMCQ,
-        currentIndex,
-        totalQuestions,
-      );
+      this.elements.flag.src = this.currentQuestion.flag_url;
+      const optionsArray = [...this.currentQuestion.options];
+      this.shuffleOptions(optionsArray);
 
-      this.funwithflags.loadMCQQuestion(
-        this.elements.flag,
-        this.elements.options,
-        question,
-        callback,
-      );
-    } else if (gameType === "MAP") {
-      this.toggleVisibility(this.elements.gameMCQ, false);
-      this.toggleVisibility(this.elements.gameMap, true);
+      this.elements.options.innerHTML = optionsArray
+        .map((option) => `<button class="option">${option}</button>`)
+        .join("");
 
-      this.funwithflags.updateProgress(
-        this.elements.progressMap,
-        currentIndex,
-        totalQuestions,
-      );
-
-      this.funwithflags.loadMapQuestion(
-        this.elements.gameMap,
-        this.elements.flagMap,
-        question,
-        callback,
-      );
+      if (this.elements.options.children.length > 0) {
+        Array.from(this.elements.options.children).forEach((button) => {
+          button.onclick = () =>
+            this.requestAnswer(this.currentQuestionIndex, button.textContent);
+        });
+      }
+    } else if (this.gametype === "MAP") {
+      // Handle map game logic later
     }
-  }
-
-  handleAnswer(selectedButton, correctAnswer, markAnswer, callback) {
-    const buttons = document.querySelectorAll(".option");
-    buttons.forEach((button) => (button.disabled = true));
-    const isCorrect = selectedButton.textContent === correctAnswer;
-
-    selectedButton.style.backgroundColor = isCorrect ? "#a8d5a2" : "#f5a9a9";
-    selectedButton.style.color = "#333";
-
-    if (!isCorrect) {
-      const correctButton = Array.from(buttons).find(
-        (button) => button.textContent === correctAnswer,
-      );
-      if (correctButton) markAnswer(correctButton, true);
-    }
-
-    setTimeout(() => {
-      buttons.forEach((button) => (button.disabled = false));
-      callback(isCorrect);
-    }, 2000);
   }
 
   // send from websocketclient
   requestQuestion(questionNumber) {
     if (
       typeof questionNumber !== "number" ||
-      questionNumber < 1 ||
+      questionNumber < 0 ||
       questionNumber > this.totalquestions
     ) {
       console.error("Invalid question number.");
@@ -302,13 +257,14 @@ class MultiplayerGameController {
   }
 
   // send from game controller
-  validateAnswer(question, answer, playerid) {
-    if (!question || typeof question !== "string") {
-      console.error("Invalid question id.");
+  requestAnswer(question_index, answer) {
+    if (typeof question_index !== "number" || question_index < 0) {
+      console.error("Invalid question index.");
       return;
     }
+
     if (!answer || typeof answer !== "string") {
-      console.error("Invalid Answer.");
+      console.error("Invalid answer.");
       return;
     }
 
@@ -316,10 +272,8 @@ class MultiplayerGameController {
       JSON.stringify({
         event: "validate_answer",
         data: {
-          roomID: this.roomID,
-          question: question,
+          question_index: question_index,
           answer: answer,
-          playerid: playerid,
         },
       }),
     );
@@ -352,8 +306,13 @@ class MultiplayerGameController {
 
     setTimeout(() => {
       buttons.forEach((button) => (button.disabled = false));
-      this.moveToNextQuestion(isCorrect);
+      this.moveToNextQuestion();
     }, 2000);
+  }
+
+  moveToNextQuestion() {
+    this.currentQuestionIndex += 1;
+    this.requestQuestion(this.currentQuestionIndex);
   }
 
   //
@@ -492,21 +451,15 @@ class MultiplayerGameController {
   }
 
   scoreUpdate(data) {
-    const playerElement = Array.from(this.elements.playerList.children).find(
-      (li) => li.textContent.includes(data.username),
+    const rows = Array.from(this.elements.leaderboardBody.children);
+
+    const playerRow = rows.find((row) =>
+      row.children[1].textContent.includes(data.username),
     );
 
-    if (playerElement) {
-      const existingScore = playerElement.querySelector(".score");
-      if (existingScore) {
-        existingScore.textContent = parseInt(existingScore.textContent) + 1;
-      } else {
-        const scoreSpan = document.createElement("span");
-        scoreSpan.className = "score";
-        scoreSpan.textContent = "1";
-        playerElement.textContent += ` - `;
-        playerElement.appendChild(scoreSpan);
-      }
+    if (playerRow) {
+      const scoreCell = playerRow.children[2];
+      scoreCell.textContent = data.score;
     }
   }
 }
