@@ -117,7 +117,6 @@ func createRoomHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	roomsLock.Lock()
 	if len(rooms) >= 10 {
 		roomsLock.Unlock()
 		w.Header().Set("Content-Type", "application/json")
@@ -127,7 +126,6 @@ func createRoomHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	roomsLock.Unlock()
 
 	if req.HostUsername == "" {
 		w.Header().Set("Content-Type", "application/json")
@@ -163,9 +161,7 @@ func createRoomHandler(w http.ResponseWriter, r *http.Request) {
 		room.Questions[strconv.Itoa(i)] = &q
 	}
 
-	roomsLock.Lock()
 	rooms[roomID] = room
-	roomsLock.Unlock()
 
 	response := map[string]interface{}{
 		"code":         room.Code,
@@ -301,9 +297,7 @@ func getRoomHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	roomID := vars["id"]
 
-	roomsLock.Lock()
 	room, exists := rooms[roomID]
-	roomsLock.Unlock()
 
 	if !exists {
 		w.Header().Set("Content-Type", "application/json")

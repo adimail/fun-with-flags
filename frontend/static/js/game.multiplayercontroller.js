@@ -15,6 +15,8 @@ class MultiplayerGameController {
     this.gameended = false;
     this.ishost = false;
 
+    this.gamePlayers = {}; // Structure: { playerId: { name, score } }
+
     this.initEventListeners();
     this.initializeRoom();
   }
@@ -64,24 +66,6 @@ class MultiplayerGameController {
     };
   }
 
-  toggleSidebar() {
-    this.elements.sidebar.classList.toggle("active");
-  }
-
-  renderLeaderboard(data) {
-    this.elements.leaderboardBody.innerHTML = data
-      .map(
-        (player) => `
-      <tr>
-        <td>${player.rank}</td>
-        <td>${player.name}</td>
-        <td>${player.score}</td>
-      </tr>
-    `,
-      )
-      .join("");
-  }
-
   initEventListeners() {
     this.elements.modalJoinButton.addEventListener("click", () => {
       const inputUsername = this.elements.modalUsernameInput.value.trim();
@@ -118,62 +102,6 @@ class MultiplayerGameController {
     });
   }
 
-  toggleVisibility(element, visible) {
-    element.classList.toggle("hidden", !visible);
-  }
-
-  showErrorModal(message) {
-    this.elements.waitingroom.classList.add("hidden");
-    this.elements.errorModalMessage.textContent = message;
-    this.elements.errorModal.classList.remove("hidden");
-  }
-
-  showError(message) {
-    this.elements.errorMessage.textContent = message;
-    this.toggleVisibility(this.elements.errorMessage, true);
-  }
-
-  hideError() {
-    this.elements.errorMessage.textContent = "";
-    this.toggleVisibility(this.elements.errorMessage, false);
-  }
-
-  askForUsername() {
-    this.elements.modal.classList.remove("hidden");
-  }
-
-  closeModal() {
-    this.elements.modal.classList.add("hidden");
-  }
-
-  populateRoomInfo(data) {
-    this.elements.roomCode.textContent = data.code;
-    this.elements.hostName.textContent = data.host;
-    this.elements.numPlayers.textContent = data.players.length;
-    this.elements.numQuestions.textContent = data.numQuestions;
-    this.elements.timeLimit.textContent = data.timeLimit;
-    this.elements.gamemode.textContent = data.gamemode;
-  }
-
-  populatePlayerList(players) {
-    this.elements.playerList.innerHTML = "";
-    players.forEach((player) => {
-      const li = document.createElement("li");
-      li.textContent = `${player.username}`;
-      this.elements.playerList.appendChild(li);
-    });
-
-    const leaderboardData = players
-      .sort((a, b) => (b.score || 0) - (a.score || 0))
-      .map((player, index) => ({
-        rank: index + 1,
-        name: player.username,
-        score: player.score || 0,
-      }));
-
-    this.renderLeaderboard(leaderboardData);
-  }
-
   fetchRoomDetails = async () => {
     try {
       const response = await fetch(`/api/room/${this.roomID}`);
@@ -185,14 +113,18 @@ class MultiplayerGameController {
         }
         return;
       }
-
       const data = await response.json();
 
       this.populateRoomInfo(data);
-      this.populatePlayerList(data.players);
       this.totalquestions = data.numQuestions;
       this.elements.playername.textContent = this.username;
       this.gametype = data.gamemode;
+
+      data.players.forEach((player) => {
+        this.addPlayer(player.id, player.username);
+      });
+
+      this.updatePlayerCount();
 
       const isHost = this.username === data.host;
       const gameStartContainer = document.querySelector(".game-start");
@@ -286,7 +218,7 @@ class MultiplayerGameController {
   // send from game controller
   validateAnswer(question, answer, playerid) {
     if (!question || typeof question !== "string") {
-      console.error("Invalid question ID.");
+      console.error("Invalid question id.");
       return;
     }
     if (!answer || typeof answer !== "string") {
@@ -307,25 +239,148 @@ class MultiplayerGameController {
     );
   }
 
-  addPlayerToList(username, id) {
-    const li = document.createElement("li");
-    li.textContent = `${username}`;
-    li.setAttribute("data-id", id);
-    this.elements.playerList.appendChild(li);
+  //
+  // UI event handlers
+  //
+  populatePlayerList(players) {
+    this.elements.playerList.innerHTML = "";
+    players.forEach((player) => {
+      const li = document.createElement("li");
+      li.textContent = `${player.username}`;
+      li.setAttribute("data-id", player.id);
+      this.elements.playerList.appendChild(li);
+    });
+
+    const leaderboardData = players
+      .sort((a, b) => (b.score || 0) - (a.score || 0))
+      .map((player, index) => ({
+        rank: index + 1,
+        name: player.username,
+        score: player.score || 0,
+      }));
+    this.renderLeaderboard(leaderboardData);
   }
 
-  removePlayerFromList(username, id) {
-    const items = Array.from(this.elements.playerList.children);
-    items.forEach((li) => {
-      if (li.getAttribute("data-id") === id && li.textContent === username) {
-        li.remove();
+  syncUI() {
+    const players = Object.entries(this.gamePlayers).map(([id, player]) => ({
+      id,
+      username: player.name,
+      score: player.score,
+    }));
+    this.populatePlayerList(players);
+  }
+
+  toggleSidebar() {
+    this.elements.sidebar.classList.toggle("active");
+  }
+
+  renderLeaderboard(data) {
+    this.elements.leaderboardBody.innerHTML = data
+      .map(
+        (player) => `
+      <tr>
+        <td>${player.rank}</td>
+        <td>${player.name}</td>
+        <td>${player.score}</td>
+      </tr>
+    `,
+      )
+      .join("");
+  }
+
+  toggleVisibility(element, visible) {
+    element.classList.toggle("hidden", !visible);
+  }
+
+  showErrorModal(message) {
+    this.elements.waitingroom.classList.add("hidden");
+    this.elements.errorModalMessage.textContent = message;
+    this.elements.errorModal.classList.remove("hidden");
+  }
+
+  showError(message) {
+    this.elements.errorMessage.textContent = message;
+    this.toggleVisibility(this.elements.errorMessage, true);
+  }
+
+  hideError() {
+    this.elements.errorMessage.textContent = "";
+    this.toggleVisibility(this.elements.errorMessage, false);
+  }
+
+  askForUsername() {
+    this.elements.modal.classList.remove("hidden");
+  }
+
+  closeModal() {
+    this.elements.modal.classList.add("hidden");
+  }
+
+  populateRoomInfo(data) {
+    this.elements.roomCode.textContent = data.code;
+    this.elements.hostName.textContent = data.host;
+    this.elements.numPlayers.textContent = Object.keys(this.gamePlayers).length;
+    this.elements.numQuestions.textContent = data.numQuestions;
+    this.elements.timeLimit.textContent = data.timeLimit;
+    this.elements.gamemode.textContent = data.gamemode;
+  }
+
+  //
+  // Handle websocket events related to players and game state
+  //
+  addPlayer(playerId, playerName) {
+    if (!this.gamePlayers[playerId]) {
+      this.gamePlayers[playerId] = { name: playerName, score: 0 };
+    }
+    this.syncUI();
+  }
+
+  removePlayer(playerId, playerName) {
+    if (this.gamePlayers[playerId]) {
+      if (this.gamePlayers[playerId].name == playerName) {
+        delete this.gamePlayers[playerId];
       }
-    });
+    }
+    this.syncUI();
+  }
+
+  updateScore(playerId, newScore) {
+    if (this.gamePlayers[playerId]) {
+      this.gamePlayers[playerId].score = newScore;
+    }
+    this.syncUI();
+  }
+
+  getPlayers() {
+    return Object.entries(this.gamePlayers).map(([id, player]) => ({
+      id,
+      name: player.name,
+      score: player.score,
+    }));
   }
 
   updatePlayerCount() {
-    this.elements.numPlayers.textContent =
-      this.elements.playerList.children.length;
+    const playerCount = Object.keys(this.gamePlayers).length;
+    this.elements.numPlayers.textContent = playerCount;
+  }
+
+  scoreUpdate(data) {
+    const playerElement = Array.from(this.elements.playerList.children).find(
+      (li) => li.textContent.includes(data.username),
+    );
+
+    if (playerElement) {
+      const existingScore = playerElement.querySelector(".score");
+      if (existingScore) {
+        existingScore.textContent = parseInt(existingScore.textContent) + 1;
+      } else {
+        const scoreSpan = document.createElement("span");
+        scoreSpan.className = "score";
+        scoreSpan.textContent = "1";
+        playerElement.textContent += ` - `;
+        playerElement.appendChild(scoreSpan);
+      }
+    }
   }
 }
 

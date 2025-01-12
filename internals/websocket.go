@@ -194,7 +194,15 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 
-			if err := sendToPlayer(room, data.PlayerID, response); err != nil {
+			message_response := map[string]interface{}{
+				"event": "answer_result",
+				"data": map[string]interface{}{
+					"correct_answer": response["correct"],
+					"chosen_answer":  response["answer"],
+				},
+			}
+
+			if err := sendToPlayer(room, data.PlayerID, message_response); err != nil {
 				log.Println("Error sending validation response to player:", err)
 				continue
 			}

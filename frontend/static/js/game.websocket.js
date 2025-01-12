@@ -12,14 +12,11 @@ class WebSocketFunWithFlags {
     const message = JSON.parse(event.data);
     switch (message.event) {
       case "playerJoined":
-        this.controller.addPlayerToList(message.data.username, message.data.id);
+        this.controller.addPlayer(message.data.id, message.data.username);
         this.controller.updatePlayerCount();
         break;
       case "playerLeft":
-        this.controller.removePlayerFromList(
-          message.data.username,
-          message.data.id,
-        );
+        this.controller.removePlayer(message.data.id, message.data.username);
         this.controller.updatePlayerCount();
         break;
       case "countdown":
@@ -37,9 +34,8 @@ class WebSocketFunWithFlags {
       case "answer_result":
         this.controller.handleAnswer(message.data);
         break;
-      case "broadcast_ans":
-        this.controller.broadcastPlayerAnswer(message.data);
-        break;
+      case "score":
+        this.controller.scoreUpdate(message.data);
       default:
         console.warn("Unhandled WebSocket event:", message.event);
     }
