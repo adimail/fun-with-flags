@@ -134,9 +134,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 		case "get_new_question":
 			var data struct {
-				RoomID         string `json:"roomID"`
-				PlayerID       string `json:"playerID"`
-				QuestionNumber int    `json:"question_number"`
+				QuestionNumber int `json:"question_number"`
 			}
 
 			err := json.Unmarshal(message.Data.([]byte), &data)
@@ -152,9 +150,12 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 
-			if err := sendToPlayer(room, data.PlayerID, map[string]interface{}{"event": "new_question", "data": question}); err != nil {
+			err = conn.WriteJSON(map[string]interface{}{
+				"event": "new_question",
+				"data":  question,
+			})
+			if err != nil {
 				log.Println("Error sending question to player:", err)
-				continue
 			}
 
 		case "validate_answer":
@@ -194,7 +195,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 
-			message_response := map[string]interface{}{
+			messageResponse := map[string]interface{}{
 				"event": "answer_result",
 				"data": map[string]interface{}{
 					"correct_answer": response["correct"],
@@ -202,9 +203,11 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 				},
 			}
 
-			if err := sendToPlayer(room, data.PlayerID, message_response); err != nil {
-				log.Println("Error sending validation response to player:", err)
-				continue
+			if data.PlayerID == player.ID {
+				err := conn.WriteJSON(messageResponse)
+				if err != nil {
+					log.Println("Error sending validation response to player:", err)
+				}
 			}
 
 			if response["answer"] == response["correct"] {
@@ -307,8 +310,8 @@ func broadcastToRoom(room *game.Room, message interface{}) {
 //   - Cleans up failed connections
 //   - Provides detailed error information
 func sendToPlayer(room *game.Room, playerID string, message interface{}) error {
-	room.Mutex.Lock()
-	defer room.Mutex.Unlock()
+	// room.Mutex.Lock()
+	// defer room.Mutex.Unlock()
 
 	var targetConn *websocket.Conn
 	var targetPlayer *game.Player
@@ -341,13 +344,21 @@ func sendToPlayer(room *game.Room, playerID string, message interface{}) error {
 //   - room: Pointer to the game.Room struct representing the game room
 //   - questionNumber: The index of the question to retrieve (zero-based)
 //
-// The function returns a pointer to the requested question struct and an error if:
+// The function returns a map containing the question data and an error if:
 //   - The provided room pointer is nil
 //   - The room has no questions
 //   - The question number is negative
 //   - The question number is out of range (greater than or equal to the total number of questions)
 //   - The question with the specified number is not found in the room
-func getQuestion(room *game.Room, questionNumber int) (*game.Question, error) {
+//
+// Behavior:
+//   - If the room's GameMode is "mcq", the returned map includes the question's options and flag URL.
+//   - For other game modes, the map contains only the flag URL.
+//
+// Example return values:
+//   - For MCQ mode: {"options": [...], "flag_url": "..."}
+//   - For non-MCQ mode: {"flag_url": "..."}
+func getQuestion(room *game.Room, questionNumber int) (map[string]interface{}, error) {
 	if room == nil {
 		return nil, fmt.Errorf("room is nil")
 	}
@@ -366,11 +377,20 @@ func getQuestion(room *game.Room, questionNumber int) (*game.Question, error) {
 
 	questionKey := strconv.Itoa(questionNumber)
 
-	if question, exists := room.Questions[questionKey]; exists {
-		return question, nil
+	question, exists := room.Questions[questionKey]
+	if !exists {
+		return nil, fmt.Errorf("question with number %d not found", questionNumber)
 	}
 
-	return nil, fmt.Errorf("question with number %d not found", questionNumber)
+	data := map[string]interface{}{
+		"flag_url": question.FlagURL,
+	}
+
+	if room.GameMode == "mcq" {
+		data["options"] = question.Options
+	}
+
+	return data, nil
 }
 
 // validateAnswer checks if a user's answer to a question is correct.

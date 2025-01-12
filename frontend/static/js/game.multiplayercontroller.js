@@ -7,8 +7,6 @@ class MultiplayerGameController {
     this.roomID = new URLSearchParams(window.location.search).get("id");
     this.socket = null;
     this.funwithflags = new GameLogic();
-    this.currentquestionindex = 0;
-    this.currentquestion = null;
     this.gametype = null;
     this.totalquestions = 0;
     this.gamestarted = false;
@@ -16,6 +14,7 @@ class MultiplayerGameController {
     this.ishost = false;
 
     this.gamePlayers = {}; // Structure: { playerId: { name, score } }
+    this.currentQuestion = {}; // Structure: {type: "map/mcq", options = [], flag_url }
 
     this.initEventListeners();
     this.initializeRoom();
@@ -155,10 +154,6 @@ class MultiplayerGameController {
     }
   }
 
-  hidewaitingroom() {
-    this.toggleVisibility(this.elements.waitingroom, false);
-  }
-
   loadgame() {
     if (!this.ishost) {
       alert("Only the game host can start the game, you are not the host.");
@@ -188,9 +183,100 @@ class MultiplayerGameController {
 
       this.toggleVisibility(this.elements.game, true);
       console.log("Game rendered. You can play now...");
+
+      this.runGame(this.elements.numQuestions, this.gametype);
     } catch {
       this.showError("An error occurred while starting the game.");
     }
+  }
+
+  endGame() {
+    console.log("Game over! Displaying final leaderboard...");
+    this.toggleVisibility(this.elements.leaderboard, true);
+    this.updateLeaderboard();
+  }
+
+  runGame() {
+    let currentQuestionIndex = 0;
+    let score = 0;
+
+    const nextQuestion = (correct) => {
+      if (correct) score++;
+      if (++currentQuestionIndex < this.totalquestions) {
+        this.loadQuestion(
+          currentQuestionIndex,
+          this.totalquestions,
+          nextQuestion,
+          this.gametype,
+        );
+      } else {
+        this.endGame();
+      }
+    };
+
+    this.loadQuestion(
+      currentQuestionIndex,
+      this.totalquestions,
+      nextQuestion,
+      this.gametype,
+    );
+  }
+
+  loadQuestion(currentIndex, totalQuestions, callback, gameType) {
+    if (gameType === "MCQ") {
+      this.toggleVisibility(this.elements.gameMCQ, true);
+      this.toggleVisibility(this.elements.gameMap, false);
+
+      this.funwithflags.updateProgress(
+        this.elements.progressMCQ,
+        currentIndex,
+        totalQuestions,
+      );
+
+      this.funwithflags.loadMCQQuestion(
+        this.elements.flag,
+        this.elements.options,
+        question,
+        callback,
+      );
+    } else if (gameType === "MAP") {
+      this.toggleVisibility(this.elements.gameMCQ, false);
+      this.toggleVisibility(this.elements.gameMap, true);
+
+      this.funwithflags.updateProgress(
+        this.elements.progressMap,
+        currentIndex,
+        totalQuestions,
+      );
+
+      this.funwithflags.loadMapQuestion(
+        this.elements.gameMap,
+        this.elements.flagMap,
+        question,
+        callback,
+      );
+    }
+  }
+
+  handleAnswer(selectedButton, correctAnswer, markAnswer, callback) {
+    const buttons = document.querySelectorAll(".option");
+    buttons.forEach((button) => (button.disabled = true));
+    const isCorrect = selectedButton.textContent === correctAnswer;
+
+    selectedButton.style.backgroundColor = isCorrect ? "#a8d5a2" : "#f5a9a9";
+    selectedButton.style.color = "#333";
+
+    if (!isCorrect) {
+      const correctButton = Array.from(buttons).find(
+        (button) => button.textContent === correctAnswer,
+      );
+      if (correctButton) markAnswer(correctButton, true);
+    }
+
+    setTimeout(() => {
+      buttons.forEach((button) => (button.disabled = false));
+      callback(isCorrect);
+    }, 2000);
   }
 
   // send from websocketclient
@@ -237,6 +323,37 @@ class MultiplayerGameController {
         },
       }),
     );
+  }
+
+  verifyAnswer(data) {
+    const correctAnswer = data.correct_answer;
+    const chosenAnswer = data.chosen_answer;
+
+    const buttons = document.querySelectorAll(".option");
+    const selectedButton = Array.from(buttons).find(
+      (button) => button.textContent === chosenAnswer,
+    );
+
+    const isCorrect = chosenAnswer === correctAnswer;
+    if (selectedButton) {
+      selectedButton.style.backgroundColor = isCorrect ? "#a8d5a2" : "#f5a9a9";
+      selectedButton.style.color = "#333";
+    }
+
+    if (!isCorrect) {
+      const correctButton = Array.from(buttons).find(
+        (button) => button.textContent === correctAnswer,
+      );
+      if (correctButton) {
+        correctButton.style.backgroundColor = "#a8d5a2";
+        correctButton.style.color = "#333";
+      }
+    }
+
+    setTimeout(() => {
+      buttons.forEach((button) => (button.disabled = false));
+      this.moveToNextQuestion(isCorrect);
+    }, 2000);
   }
 
   //
@@ -325,6 +442,10 @@ class MultiplayerGameController {
     this.elements.gamemode.textContent = data.gamemode;
   }
 
+  hidewaitingroom() {
+    this.toggleVisibility(this.elements.waitingroom, false);
+  }
+
   //
   // Handle websocket events related to players and game state
   //
@@ -349,6 +470,12 @@ class MultiplayerGameController {
       this.gamePlayers[playerId].score = newScore;
     }
     this.syncUI();
+  }
+
+  updateCurrentQuestion(data) {
+    this.currentQuestion.type = this.gametype;
+    this.currentQuestion.options = data.options;
+    this.currentQuestion.flag_url = data.flag_url;
   }
 
   getPlayers() {

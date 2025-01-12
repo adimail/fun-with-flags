@@ -29,10 +29,10 @@ class WebSocketFunWithFlags {
         this.requestQuestion(1);
         break;
       case "new_question":
-        this.controller.displayQuestion(message.data);
+        this.controller.updateCurrentQuestion(message.data);
         break;
       case "answer_result":
-        this.controller.handleAnswer(message.data);
+        this.controller.verifyAnswer(message.data);
         break;
       case "score":
         this.controller.scoreUpdate(message.data);

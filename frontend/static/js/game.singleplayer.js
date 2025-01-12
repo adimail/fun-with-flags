@@ -121,6 +121,7 @@ class SinglePlayerGameController {
         this.elements.options,
         question,
         callback,
+        this.funwithflags.handleAnswer,
       );
     } else if (gameType === "MAP") {
       this.toggleVisibility(this.elements.gameMCQ, false);

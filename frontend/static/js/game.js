@@ -164,17 +164,19 @@ class GameLogic {
     progressElement.textContent = `Question ${currentIndex + 1} of ${totalQuestions}`;
   }
 
-  handleAnswer(selectedButton, isCorrect, correctAnswer, callback) {
+  handleAnswer(selectedButton, correctAnswer, markAnswer, callback) {
     const buttons = document.querySelectorAll(".option");
     buttons.forEach((button) => (button.disabled = true));
+    const isCorrect = selectedButton.textContent === correctAnswer;
 
-    this.markAnswer(selectedButton, isCorrect);
+    selectedButton.style.backgroundColor = isCorrect ? "#a8d5a2" : "#f5a9a9";
+    selectedButton.style.color = "#333";
 
     if (!isCorrect) {
       const correctButton = Array.from(buttons).find(
         (button) => button.textContent === correctAnswer,
       );
-      if (correctButton) this.markAnswer(correctButton, true);
+      if (correctButton) markAnswer(correctButton, true);
     }
 
     setTimeout(() => {
@@ -190,7 +192,13 @@ class GameLogic {
     this.currentCallback = callback;
   }
 
-  loadMCQQuestion(flagElement, optionsElement, question, callback) {
+  loadMCQQuestion(
+    flagElement,
+    optionsElement,
+    question,
+    callback,
+    handleAnswer,
+  ) {
     flagElement.src = question.flag_url;
     const optionsArray = [...question.options];
     this.shuffleOptions(optionsArray);
@@ -201,12 +209,7 @@ class GameLogic {
 
     Array.from(optionsElement.children).forEach((button) => {
       button.onclick = () =>
-        this.handleAnswer(
-          button,
-          button.textContent === question.answer,
-          question.answer,
-          callback,
-        );
+        handleAnswer(button, question.answer, this.markAnswer, callback);
     });
   }
 
