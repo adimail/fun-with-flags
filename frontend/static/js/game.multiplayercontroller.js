@@ -168,7 +168,6 @@ class MultiplayerGameController {
 
     this.hidewaitingroom();
 
-    console.log("Host started the game");
     this.gamestarted = true;
 
     this.socket.send(JSON.stringify({ event: "loadgame" }));
@@ -186,12 +185,6 @@ class MultiplayerGameController {
     } catch {
       this.showError("An error occurred while starting the game.");
     }
-  }
-
-  endGame() {
-    console.log("Game over! Displaying final leaderboard...");
-    this.toggleVisibility(this.elements.leaderboard, true);
-    this.updateLeaderboard();
   }
 
   shuffleOptions(array) {
@@ -244,6 +237,15 @@ class MultiplayerGameController {
       console.error("Invalid question number.");
       return;
     }
+
+    this.funwithflags.updateProgress(
+      this.gametype === "MCQ"
+        ? this.elements.progressMCQ
+        : this.elements.progressMap,
+      this.currentQuestionIndex,
+      this.totalquestions,
+    );
+
     this.socket.send(
       JSON.stringify({
         event: "get_new_question",
@@ -311,8 +313,10 @@ class MultiplayerGameController {
   }
 
   moveToNextQuestion() {
-    this.currentQuestionIndex += 1;
-    this.requestQuestion(this.currentQuestionIndex);
+    if (this.currentQuestionIndex < this.totalquestions) {
+      this.currentQuestionIndex += 1;
+      this.requestQuestion(this.currentQuestionIndex);
+    }
   }
 
   //
@@ -329,8 +333,7 @@ class MultiplayerGameController {
 
     const leaderboardData = players
       .sort((a, b) => (b.score || 0) - (a.score || 0))
-      .map((player, index) => ({
-        rank: index + 1,
+      .map((player) => ({
         name: player.username,
         score: player.score || 0,
       }));
@@ -348,20 +351,6 @@ class MultiplayerGameController {
 
   toggleSidebar() {
     this.elements.sidebar.classList.toggle("active");
-  }
-
-  renderLeaderboard(data) {
-    this.elements.leaderboardBody.innerHTML = data
-      .map(
-        (player) => `
-      <tr>
-        <td>${player.rank}</td>
-        <td>${player.name}</td>
-        <td>${player.score}</td>
-      </tr>
-    `,
-      )
-      .join("");
   }
 
   toggleVisibility(element, visible) {
@@ -452,14 +441,55 @@ class MultiplayerGameController {
 
   scoreUpdate(data) {
     const rows = Array.from(this.elements.leaderboardBody.children);
-
     const playerRow = rows.find((row) =>
       row.children[1].textContent.includes(data.username),
     );
-
     if (playerRow) {
       const scoreCell = playerRow.children[2];
-      scoreCell.textContent = data.score;
+      scoreCell.textContent = parseInt(data.score);
+
+      const leaderboardData = rows.map((row) => ({
+        name: row.children[1].textContent.replace(" (You)", ""),
+        score: parseInt(row.children[2].textContent),
+      }));
+
+      leaderboardData.sort((a, b) => b.score - a.score);
+
+      this.renderLeaderboard(leaderboardData);
+    }
+  }
+
+  renderLeaderboard(data) {
+    this.elements.leaderboardBody.innerHTML = data
+      .map(
+        (player, index) => `
+            <tr>
+                <td>${index + 1}</td>
+                <td>${player.name} ${this.username === player.name ? "(You)" : ""}</td>
+                <td>${player.score}</td>
+            </tr>
+        `,
+      )
+      .join("");
+  }
+
+  endgame() {
+    alert("Game has ended");
+    this.toggleSidebar();
+  }
+
+  finishGame(username) {
+    const rows = Array.from(this.elements.leaderboardBody.children);
+    const playerRow = rows.find((row) =>
+      row.children[1].textContent.includes(username),
+    );
+
+    if (playerRow) {
+      playerRow.classList.add("completed-player");
+    }
+
+    if (username == this.username) {
+      this.toggleSidebar();
     }
   }
 }

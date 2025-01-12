@@ -13,10 +13,11 @@ type Question struct {
 }
 
 type Player struct {
-	ID       string
-	Username string
-	Score    int
-	Conn     *websocket.Conn
+	ID        string
+	Username  string
+	Score     int
+	Completed bool
+	Conn      *websocket.Conn
 }
 
 type GameState struct {
@@ -32,7 +33,6 @@ type Room struct {
 	Start     bool
 	TimeLimit int // in seconds
 	GameMode  string
-	Mutex     sync.Mutex
 }
 
 type CreateRoomRequest struct {

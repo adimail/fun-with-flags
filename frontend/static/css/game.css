@@ -617,6 +617,22 @@ input[type="range"]::-moz-range-thumb {
 .leaderboard-table td {
   color: #555;
 }
+
+.completed-player {
+  background-color: #d4edda;
+  color: #155724;
+  font-weight: bold;
+  border-left: 4px solid #28a745;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
+
+.completed-player:hover {
+  background-color: #c3e6cb;
+  cursor: pointer;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

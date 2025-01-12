@@ -79,8 +79,6 @@ func generateQuestions(numQuestions int, gameType string) ([]game.Question, erro
 
 func getSerializablePlayers(room *game.Room) []map[string]interface{} {
 	players := []map[string]interface{}{}
-	room.Mutex.Lock()
-	defer room.Mutex.Unlock()
 	for _, playerConn := range room.Players {
 		if playerConn != nil {
 			players = append(players, map[string]interface{}{
@@ -95,4 +93,14 @@ func getSerializablePlayers(room *game.Room) []map[string]interface{} {
 
 func calculateScore(answers int, totalquestions int, submissiontime int, totaltime int) int {
 	return answers * totalquestions * (submissiontime / totaltime)
+}
+
+func allPlayersCompleted(room *game.Room) bool {
+	for _, player := range room.Players {
+		if !player.Completed {
+			return false
+		}
+	}
+
+	return true
 }

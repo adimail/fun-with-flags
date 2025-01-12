@@ -57,9 +57,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	roomsLock.Lock()
 	room, exists := rooms[initialMessage.RoomID]
-	roomsLock.Unlock()
 
 	if !exists {
 		conn.WriteJSON(map[string]string{"error": "Room not found"})
@@ -67,23 +65,21 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(room.Players) >= 9 {
-		room.Mutex.Unlock()
 		conn.WriteJSON(map[string]string{"error": "Room is full, only 9 members can join in one room"})
 		return
 	}
 
 	// Create a new player instance
 	player := &game.Player{
-		ID:       generatePlayerID(),
-		Username: initialMessage.Username,
-		Score:    0,
-		Conn:     conn,
+		ID:        generatePlayerID(),
+		Username:  initialMessage.Username,
+		Score:     0,
+		Completed: false,
+		Conn:      conn,
 	}
 
 	// Add the player to the room's Players map
-	room.Mutex.Lock()
 	room.Players[conn] = player
-	room.Mutex.Unlock()
 
 	// Notify all players about the new player
 	broadcastToRoom(room, map[string]interface{}{
@@ -123,9 +119,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 				time.Sleep(1 * time.Second)
 			}
 
-			room.Mutex.Lock()
 			room.Start = true
-			room.Mutex.Unlock()
 
 			broadcastToRoom(room, map[string]interface{}{
 				"event": "gameStarted",
@@ -223,6 +217,26 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 				})
 			}
 
+			if data.QuestionIndex+1 == len(room.Questions) {
+				player.Completed = true
+				broadcastToRoom(room, map[string]interface{}{
+					"event":    "finished_game",
+					"username": player.Username,
+				})
+
+				// if allPlayersCompleted(room) {
+				// 	broadcastToRoom(room, map[string]interface{}{
+				// 		"event": "gameFinished",
+				// 	})
+				//
+				// 	for conn := range room.Players {
+				// 		conn.Close()
+				// 	}
+				//
+				// 	delete(rooms, initialMessage.RoomID)
+				// }
+			}
+
 		}
 	}
 
@@ -245,10 +259,8 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 //   - Cleans up empty rooms
 //   - Handles thread-safe access to shared resources
 func removePlayerFromRoom(roomID string, room *game.Room, conn *websocket.Conn, player *game.Player) {
-	room.Mutex.Lock()
 	delete(room.Players, conn)
 	remainingPlayers := len(room.Players)
-	room.Mutex.Unlock()
 
 	// Notify remaining players
 	broadcastToRoom(room, map[string]interface{}{
@@ -260,11 +272,7 @@ func removePlayerFromRoom(roomID string, room *game.Room, conn *websocket.Conn, 
 	})
 
 	if remainingPlayers == 0 {
-		// Remove the room if no players are left
-		roomsLock.Lock()
 		delete(rooms, roomID)
-		roomsLock.Unlock()
-
 		log.Printf("Room %s has been closed.", roomID)
 	}
 }
@@ -281,11 +289,7 @@ func removePlayerFromRoom(roomID string, room *game.Room, conn *websocket.Conn, 
 //   - Acquires the room mutex to ensure thread-safe access
 //   - Attempts to send the message to each connected player
 //   - Handles failed sends by closing connections and removing players
-//   - Uses deferred mutex unlock to prevent deadlocks
 func broadcastToRoom(room *game.Room, message interface{}) {
-	room.Mutex.Lock()
-	defer room.Mutex.Unlock()
-
 	for conn, player := range room.Players {
 		if err := conn.WriteJSON(message); err != nil {
 			log.Printf("Error broadcasting message to player %s: %v", player.Username, err)
@@ -314,9 +318,6 @@ func broadcastToRoom(room *game.Room, message interface{}) {
 //   - Cleans up failed connections
 //   - Provides detailed error information
 func sendToPlayer(room *game.Room, playerID string, message interface{}) error {
-	// room.Mutex.Lock()
-	// defer room.Mutex.Unlock()
-
 	var targetConn *websocket.Conn
 	var targetPlayer *game.Player
 

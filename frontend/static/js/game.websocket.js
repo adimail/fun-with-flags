@@ -37,6 +37,13 @@ class WebSocketFunWithFlags {
         break;
       case "score":
         this.controller.scoreUpdate(message.data);
+        break;
+      case "finished_game":
+        this.controller.finishGame(message.username);
+        break;
+      case "finishGame":
+        this.controller.endgame();
+        break;
       default:
         console.warn("Unhandled WebSocket event:", message.event);
     }
@@ -87,7 +94,7 @@ class WebSocketFunWithFlags {
 
     socket.onerror = (error) => {
       this.controller.showErrorModal(
-        "WebSocket error occurred. Please refresh the page.",
+        "WebSocket error occurred. GAme has ended",
       );
       console.error("WebSocket error:", error);
     };

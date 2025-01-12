@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/adimail/fun-with-flags/internals/game"
@@ -16,10 +15,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var (
-	rooms     = make(map[string]*game.Room)
-	roomsLock sync.Mutex
-)
+var rooms = make(map[string]*game.Room)
 
 type ErrorResponse struct {
 	Error string `json:"error"`
@@ -118,7 +114,6 @@ func createRoomHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(rooms) >= 10 {
-		roomsLock.Unlock()
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusForbidden)
 		json.NewEncoder(w).Encode(ErrorResponse{
@@ -229,9 +224,7 @@ func joinRoomHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	roomsLock.Lock()
 	room, exists := rooms[req.RoomID]
-	roomsLock.Unlock()
 
 	if !exists {
 		w.Header().Set("Content-Type", "application/json")
@@ -328,8 +321,6 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	roomsLock.Lock()
-
 	if len(rooms) == 0 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
@@ -350,8 +341,6 @@ func adminHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		allRooms = append(allRooms, roomDetails)
 	}
-
-	roomsLock.Unlock()
 
 	// Respond with the JSON of all rooms
 	w.Header().Set("Content-Type", "application/json")
