@@ -13,11 +13,16 @@
     <div id="question-modal" class="modal">
       <div class="modal-content">
         <h2>Create game room</h2>
-        <p>Select game mode</p>
-        <select style="margin-bottom: 30px" id="game-type">
-          <option value="MCQ" selected>Multiple Choice Quiz</option>
-          <option value="MAP">Map Challenge</option>
-        </select>
+        <div class="game-type-selector">
+          <label>
+            <input type="radio" name="game-type" value="MCQ" checked />
+            <span>Multiple Choice Quiz</span>
+          </label>
+          <label>
+            <input type="radio" name="game-type" value="MAP" />
+            <span>Map Challenge</span>
+          </label>
+        </div>
 
         <div>
           <input

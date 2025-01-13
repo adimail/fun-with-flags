@@ -9,6 +9,8 @@ const elements = {
   gameType: document.getElementById("game-type"),
 };
 
+var gameMode = "MCQ";
+
 const handleRangeInput = (event, displayElement) => {
   displayElement.textContent = event.target.value;
 };
@@ -23,12 +25,18 @@ const hideError = () => {
   elements.errorMessage.classList.add("hidden");
 };
 
+document.querySelectorAll('input[name="game-type"]').forEach((radio) => {
+  radio.addEventListener("change", (event) => {
+    gameMode = event.target.value;
+  });
+});
+
 const createRoom = async () => {
   try {
     const timeLimit = parseInt(elements.timeLimit.value, 10);
     const numQuestions = parseInt(elements.numQuestions.value, 10);
     const host = elements.hostUsername.value.trim();
-    const gameType = elements.gameType.value.trim();
+    const gameType = gameMode;
 
     hideError();
 

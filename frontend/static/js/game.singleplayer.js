@@ -5,6 +5,7 @@ class SinglePlayerGameController {
     this.elements = this.cacheElements();
     this.funwithflags = new GameLogic();
     this.initEventListeners();
+    this.gameMode = "MCQ";
   }
 
   cacheElements() {
@@ -34,11 +35,17 @@ class SinglePlayerGameController {
     });
 
     this.elements.startGameBtn.onclick = this.startGame.bind(this);
+
+    document.querySelectorAll('input[name="game-type"]').forEach((radio) => {
+      radio.addEventListener("change", (event) => {
+        this.gameMode = event.target.value;
+      });
+    });
   }
 
   async startGame() {
     const numQuestions = parseInt(this.elements.numQuestions.value);
-    const gameType = document.getElementById("game-type").value;
+    const gameType = this.gameMode;
 
     if (isNaN(numQuestions) || numQuestions <= 0) {
       this.showError("Please enter a valid number of questions.");

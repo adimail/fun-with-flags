@@ -228,6 +228,42 @@ input[type="range"]::-moz-range-thumb {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
+.game-type-selector {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+  padding: 10px 20px;
+  overflow: hidden;
+}
+
+.game-type-selector label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  border: 2px solid var(--primary-color);
+  border-radius: 10px;
+  transition: all var(--transition-duration);
+}
+
+.game-type-selector input[type="radio"] {
+  display: none;
+}
+
+.game-type-selector span {
+  font-size: 16px;
+  color: var(--primary-color);
+  transition: color var(--transition-duration);
+  padding: 10px 20px;
+}
+
+.game-type-selector input[type="radio"]:checked + span {
+  font-weight: bold;
+  color: white;
+  background-color: var(--primary-color);
+}
+
 /* Modals */
 .modal {
   position: fixed;
