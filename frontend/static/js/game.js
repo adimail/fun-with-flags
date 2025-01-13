@@ -113,39 +113,41 @@ class GameLogic {
 
       if (clickedFeature) {
         const userSelectedCountry = clickedFeature.get("name");
-        const correctCountry = this.currentQuestion.answer;
-        const isCorrect = correctCountry === userSelectedCountry;
-        this.markerAddingDisabled = true;
 
-        if (isCorrect) {
-          this.highlightCountry(
-            userSelectedCountry,
-            "rgba(50, 205, 50, 0.6)",
-            "#32CD32",
-          );
-        } else {
-          this.highlightCountry(
-            userSelectedCountry,
-            "rgba(255, 0, 0, 0.6)",
-            "#FF0000",
-          );
-          this.highlightCountry(
-            correctCountry,
-            "rgba(50, 205, 50, 0.6)",
-            "#32CD32",
-          );
-        }
-
-        setTimeout(() => {
-          this.markerAddingDisabled = false;
-          if (this.currentCallback) {
-            this.currentCallback(isCorrect);
-          }
-        }, 4000);
+        this.handleMapClick(userSelectedCountry, this.currentQuestion.answer);
       } else {
         alert("Please select a valid country.");
       }
     });
+  }
+
+  handleMapClick(userSelectedCountry, correctAnswer) {
+    if (this.markerAddingDisabled) return;
+
+    const isCorrect = correctAnswer === userSelectedCountry;
+    this.markerAddingDisabled = true;
+
+    if (isCorrect) {
+      this.highlightCountry(
+        userSelectedCountry,
+        "rgba(50, 205, 50, 0.6)",
+        "#32CD32",
+      );
+    } else {
+      this.highlightCountry(
+        userSelectedCountry,
+        "rgba(255, 0, 0, 0.6)",
+        "#FF0000",
+      );
+      this.highlightCountry(correctAnswer, "rgba(50, 205, 50, 0.6)", "#32CD32");
+    }
+
+    setTimeout(() => {
+      this.markerAddingDisabled = false;
+      if (this.currentCallback) {
+        this.currentCallback(isCorrect, userSelectedCountry, correctAnswer);
+      }
+    }, 4000);
   }
 
   shuffleOptions(array) {

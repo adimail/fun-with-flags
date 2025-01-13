@@ -178,13 +178,35 @@ class MultiplayerGameController {
       if (this.gametype === "MAP") {
         this.funwithflags.loadMapCSSAndJS(() => {
           this.funwithflags.initializeMap("map");
+
+          const map = this.funwithflags.map;
+
+          map.on("click", (event) => {
+            const clickedFeature = map.forEachFeatureAtPixel(
+              event.pixel,
+              (feature) => feature,
+            );
+
+            if (clickedFeature) {
+              const userSelectedCountry = clickedFeature.get("name");
+
+              this.handleMapClick(userSelectedCountry);
+            } else {
+              alert("Please select a valid country.");
+            }
+          });
         });
       }
 
       this.toggleVisibility(this.elements.game, true);
-    } catch {
+    } catch (error) {
       this.showError("An error occurred while starting the game.");
+      console.error(error);
     }
+  }
+
+  handleMapClick(selectedCountry) {
+    this.requestAnswer(this.currentQuestionIndex, selectedCountry);
   }
 
   shuffleOptions(array) {
@@ -195,15 +217,6 @@ class MultiplayerGameController {
   }
 
   loadQuestion() {
-    if (
-      !this.currentQuestion.flag_url ||
-      !Array.isArray(this.currentQuestion.options)
-    ) {
-      console.error("Invalid question data.");
-      console.log(this.currentQuestion);
-      return;
-    }
-
     if (this.gametype === "MCQ") {
       this.toggleVisibility(this.elements.gameMCQ, true);
       this.toggleVisibility(this.elements.gameMap, false);
@@ -223,7 +236,10 @@ class MultiplayerGameController {
         });
       }
     } else if (this.gametype === "MAP") {
-      // Handle map game logic later
+      this.toggleVisibility(this.elements.gameMCQ, false);
+      this.toggleVisibility(this.elements.gameMap, true);
+
+      this.elements.flagMap.src = this.currentQuestion.flag_url;
     }
   }
 
@@ -266,7 +282,7 @@ class MultiplayerGameController {
     }
 
     if (!answer || typeof answer !== "string") {
-      console.error("Invalid answer.");
+      console.error("Invalid answer: ", answer);
       return;
     }
 
@@ -282,34 +298,46 @@ class MultiplayerGameController {
   }
 
   verifyAnswer(data) {
-    const correctAnswer = data.correct_answer;
-    const chosenAnswer = data.chosen_answer;
+    if (this.gametype == "MAP") {
+      this.funwithflags.handleMapClick(data.chosen_answer, data.correct_answer);
+    } else {
+      const correctAnswer = data.correct_answer;
+      const chosenAnswer = data.chosen_answer;
 
-    const buttons = document.querySelectorAll(".option");
-    const selectedButton = Array.from(buttons).find(
-      (button) => button.textContent === chosenAnswer,
-    );
-
-    const isCorrect = chosenAnswer === correctAnswer;
-    if (selectedButton) {
-      selectedButton.style.backgroundColor = isCorrect ? "#a8d5a2" : "#f5a9a9";
-      selectedButton.style.color = "#333";
-    }
-
-    if (!isCorrect) {
-      const correctButton = Array.from(buttons).find(
-        (button) => button.textContent === correctAnswer,
+      const buttons = document.querySelectorAll(".option");
+      const selectedButton = Array.from(buttons).find(
+        (button) => button.textContent === chosenAnswer,
       );
-      if (correctButton) {
-        correctButton.style.backgroundColor = "#a8d5a2";
-        correctButton.style.color = "#333";
+
+      const isCorrect = chosenAnswer === correctAnswer;
+      if (selectedButton) {
+        selectedButton.style.backgroundColor = isCorrect
+          ? "#a8d5a2"
+          : "#f5a9a9";
+        selectedButton.style.color = "#333";
+      }
+
+      if (!isCorrect) {
+        const correctButton = Array.from(buttons).find(
+          (button) => button.textContent === correctAnswer,
+        );
+        if (correctButton) {
+          correctButton.style.backgroundColor = "#a8d5a2";
+          correctButton.style.color = "#333";
+        }
       }
     }
 
-    setTimeout(() => {
-      buttons.forEach((button) => (button.disabled = false));
-      this.moveToNextQuestion();
-    }, 2000);
+    if (this.gametype === "MCQ") {
+      setTimeout(() => {
+        buttons.forEach((button) => (button.disabled = false));
+        this.moveToNextQuestion();
+      }, 2000);
+    } else {
+      setTimeout(() => {
+        this.moveToNextQuestion();
+      }, 4000);
+    }
   }
 
   moveToNextQuestion() {
