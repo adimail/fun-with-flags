@@ -126,6 +126,10 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			})
 
 		case "get_new_question":
+			// When a client sends this event, it will send the question index for the question
+			// and this is handeled by returning the room.Questions[requetedindex] question
+			//
+			// This event sends the requested question to the client which requested it using conn.WriteJSON
 			var questionNumber int
 
 			if dataMap, ok := message.Data.(map[string]interface{}); ok {
@@ -158,6 +162,8 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			}
 
 		case "clean_room":
+			// After all players have finished the game, the memory
+			// is cleared and all room and player instances are erased
 			if allPlayersCompleted(room) {
 				broadcastToRoom(room, map[string]interface{}{
 					"event": "gameFinished",
@@ -171,6 +177,9 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			}
 
 		case "validate_answer":
+			// This WebSocket event handles answer validation for a quiz or game.
+			// It receives the question index and the player's chosen answer from the client
+			// and delegates validation to the backend.
 			var rawData map[string]interface{}
 			rawData, ok := message.Data.(map[string]interface{})
 			if !ok {

@@ -1,15 +1,23 @@
 # Fun with Flags
 
-## Overview
+Web-based multiplayer game designed to test your knowledge of country flags. The game offers both single-player and multiplayer modes, allowing players to create or join game rooms.
 
-"Fun with Flags" is a web-based multiplayer game where players identify flags of different countries. The game is designed for both single-player and multiplayer modes where users to create and join game rooms.
+## Game Modes
 
-## Game Rules
+1. **Flag-to-Country Mode (MCQ)**
 
-- Players are presented with a list of flags and must identify the correct flag for the given country.
-- The game starts when the host starts the game.
-- Each game has a timer that counts down from the selected time limit (3 to 10 minutes).
-- Players can join the game room using the unique room code generated when the room is created.
+   - Players are presented with a flag image and must select the correct country name from the options provided.
+
+2. **Map challenge**
+   - Players are given a country flag and must locate it on a world map based on its flag.
+
+Both modes are available for single-player and multiplayer gameplay.
+
+## Technology Stack
+
+- **Backend**: Built using Go, with Gorilla Web Toolkit for handling WebSocket connections and RESTful APIs.
+- **Frontend**: Developed using HTML, CSS, and vanilla JavaScript for a seamless user interface.
+- **Real-Time Communication**: WebSocket technology ensures low-latency interactions between players.
 
 ## Screenshots
 
@@ -18,3 +26,23 @@
 ![Multiplayer](./docs/ss2.jpeg)
 
 ![Websockets](./docs/ss3.jpeg)
+
+## Building Locally
+
+1. **Install Dependencies**
+
+   Ensure you have Go installed. Then, run:
+
+   ```bash
+   go mod download
+   ```
+
+2. **Run the Server**
+
+   ```bash
+   make run
+   ```
+
+## License
+
+"Fun with Flags" is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.

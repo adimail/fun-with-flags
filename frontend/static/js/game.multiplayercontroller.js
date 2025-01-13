@@ -300,6 +300,9 @@ class MultiplayerGameController {
   verifyAnswer(data) {
     if (this.gametype == "MAP") {
       this.funwithflags.handleMapClick(data.chosen_answer, data.correct_answer);
+      setTimeout(() => {
+        this.moveToNextQuestion();
+      }, 4000);
     } else {
       const correctAnswer = data.correct_answer;
       const chosenAnswer = data.chosen_answer;
@@ -326,17 +329,10 @@ class MultiplayerGameController {
           correctButton.style.color = "#333";
         }
       }
-    }
-
-    if (this.gametype === "MCQ") {
       setTimeout(() => {
         buttons.forEach((button) => (button.disabled = false));
         this.moveToNextQuestion();
       }, 2000);
-    } else {
-      setTimeout(() => {
-        this.moveToNextQuestion();
-      }, 4000);
     }
   }
 
