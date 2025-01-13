@@ -476,6 +476,11 @@ class MultiplayerGameController {
   endgame() {
     alert("Game has ended");
     this.toggleSidebar();
+    this.socket.send(
+      JSON.stringify({
+        event: "clean_room",
+      }),
+    );
   }
 
   finishGame(username) {

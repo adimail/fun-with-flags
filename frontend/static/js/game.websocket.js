@@ -41,9 +41,8 @@ class WebSocketFunWithFlags {
       case "finished_game":
         this.controller.finishGame(message.username);
         break;
-      case "finishGame":
+      case "all_players_finished":
         this.controller.endgame();
-        break;
       default:
         console.warn("Unhandled WebSocket event:", message.event);
     }

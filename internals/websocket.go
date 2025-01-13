@@ -157,6 +157,19 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 				log.Println("Error sending question to player:", err)
 			}
 
+		case "clean_room":
+			if allPlayersCompleted(room) {
+				broadcastToRoom(room, map[string]interface{}{
+					"event": "gameFinished",
+				})
+
+				for conn := range room.Players {
+					conn.Close()
+				}
+
+				delete(rooms, initialMessage.RoomID)
+			}
+
 		case "validate_answer":
 			var rawData map[string]interface{}
 			rawData, ok := message.Data.(map[string]interface{})
@@ -224,17 +237,12 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 					"username": player.Username,
 				})
 
-				// if allPlayersCompleted(room) {
-				// 	broadcastToRoom(room, map[string]interface{}{
-				// 		"event": "gameFinished",
-				// 	})
-				//
-				// 	for conn := range room.Players {
-				// 		conn.Close()
-				// 	}
-				//
-				// 	delete(rooms, initialMessage.RoomID)
-				// }
+				if allPlayersCompleted(room) {
+					broadcastToRoom(room, map[string]interface{}{
+						"event": "all_players_finished",
+					})
+				}
+
 			}
 
 		}
