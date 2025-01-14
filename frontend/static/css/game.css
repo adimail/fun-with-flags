@@ -179,6 +179,12 @@ select:hover {
   margin-bottom: 5px;
 }
 
+#game-timer {
+  padding: 0;
+  margin: 0;
+  padding-bottom: 10px;
+}
+
 .toggle-theme {
   position: fixed;
   top: 10px;
@@ -230,6 +236,7 @@ input[type="range"]::-moz-range-thumb {
 
 .game-type-selector {
   display: flex;
+  flex-wrap: wrap;
   gap: 20px;
   justify-content: center;
   align-items: center;
@@ -456,6 +463,11 @@ input[type="range"]::-moz-range-thumb {
   input[type="text"],
   input[type="range"] {
     font-size: 18px;
+  }
+
+  .game-type-selector span,
+  label {
+    width: 100%;
   }
 
   .flag {

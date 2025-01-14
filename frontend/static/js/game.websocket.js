@@ -49,6 +49,11 @@ class WebSocketFunWithFlags {
       case "finished_game":
         this.controller.finishGame(message.username);
         break;
+      case "time_over":
+        // When the game has ended, time over event is
+        // send from the server and then it alerts the user that the game has ended.
+        this.controller.timeover();
+        break;
       case "all_players_finished":
         // This is the end point and this is when the game finished
         // and the websocket connections are erased after this point

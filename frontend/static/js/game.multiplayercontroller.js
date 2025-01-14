@@ -12,6 +12,7 @@ class MultiplayerGameController {
     this.gamestarted = false;
     this.gameended = false;
     this.ishost = false;
+    this.gameTime = 0;
 
     this.gamePlayers = {}; // Structure: { playerId: { name, score } }
     this.currentQuestion = {}; // Structure: {type: "map/mcq", options = [], flag_url }
@@ -57,6 +58,7 @@ class MultiplayerGameController {
       gameMap: document.getElementById("game-map"),
       flagMap: document.getElementById("flag-map"),
       mapContainer: document.querySelector(".map-container"),
+      gameTimer: document.getElementById("game-timer"),
 
       // Leaderboard
       leaderboardIcon: document.querySelector(".leaderboard-icon"),
@@ -119,6 +121,7 @@ class MultiplayerGameController {
       this.totalquestions = data.numQuestions;
       this.elements.playername.textContent = this.username;
       this.gametype = data.gamemode;
+      this.gameTime = data.timeLimit;
 
       data.players.forEach((player) => {
         this.addPlayer(player.id, player.username);
@@ -199,6 +202,7 @@ class MultiplayerGameController {
       }
 
       this.toggleVisibility(this.elements.game, true);
+      this.startTimer(this.gameTime);
     } catch (error) {
       this.showError("An error occurred while starting the game.");
       console.error(error);
@@ -495,6 +499,41 @@ class MultiplayerGameController {
         `,
       )
       .join("");
+  }
+
+  timeover() {
+    alert("Game over");
+    this.toggleSidebar();
+  }
+
+  startTimer(minutes, onTimerEnd = () => {}) {
+    const timerSpan = document.getElementById("game-timer");
+
+    if (!timerSpan) {
+      console.error("Timer element not found!");
+      return;
+    }
+
+    let totalSeconds = Math.max(0, minutes * 60);
+    updateDisplay();
+
+    const timerInterval = setInterval(() => {
+      if (totalSeconds <= 0) {
+        clearInterval(timerInterval);
+        timerSpan.textContent = "0:00";
+        onTimerEnd();
+        return;
+      }
+
+      totalSeconds--;
+      updateDisplay();
+    }, 1000);
+
+    function updateDisplay() {
+      const mins = Math.floor(totalSeconds / 60);
+      const secs = totalSeconds % 60;
+      timerSpan.textContent = `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+    }
   }
 
   endgame() {

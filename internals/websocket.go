@@ -125,6 +125,20 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 				"event": "gameStarted",
 			})
 
+			go func(room *game.Room) {
+				time.Sleep(time.Duration(room.TimeLimit) * time.Minute)
+
+				broadcastToRoom(room, map[string]interface{}{
+					"event": "time_over",
+				})
+
+				for conn := range room.Players {
+					conn.Close()
+				}
+
+				delete(rooms, room.Code)
+			}(room)
+
 		case "get_new_question":
 			// When a client sends this event, it will send the question index for the question
 			// and this is handeled by returning the room.Questions[requetedindex] question
@@ -165,10 +179,6 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			// After all players have finished the game, the memory
 			// is cleared and all room and player instances are erased
 			if allPlayersCompleted(room) {
-				broadcastToRoom(room, map[string]interface{}{
-					"event": "gameFinished",
-				})
-
 				for conn := range room.Players {
 					conn.Close()
 				}
