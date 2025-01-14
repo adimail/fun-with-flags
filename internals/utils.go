@@ -2,13 +2,38 @@ package internals
 
 import (
 	"encoding/csv"
+	"log"
 	"math/rand"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/adimail/fun-with-flags/internals/game"
 )
+
+var mu sync.Mutex
+
+func StartRoomCleanup(interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		cleanupEmptyRooms()
+	}
+}
+
+func cleanupEmptyRooms() {
+	mu.Lock()
+	defer mu.Unlock()
+
+	for roomID, room := range rooms {
+		if len(room.Players) == 0 {
+			log.Printf("Deleting empty room: %s", roomID)
+			delete(rooms, roomID)
+		}
+	}
+}
 
 func newRandomGenerator() *rand.Rand {
 	return rand.New(rand.NewSource(time.Now().UnixNano()))

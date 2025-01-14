@@ -221,6 +221,7 @@ class MultiplayerGameController {
   }
 
   loadQuestion() {
+    if (this.gameended) return;
     if (this.gametype === "MCQ") {
       this.toggleVisibility(this.elements.gameMCQ, true);
       this.toggleVisibility(this.elements.gameMap, false);
@@ -249,6 +250,7 @@ class MultiplayerGameController {
 
   // send from websocketclient
   requestQuestion(questionNumber) {
+    if (this.gameended) return;
     if (
       typeof questionNumber !== "number" ||
       questionNumber < 0 ||
@@ -280,6 +282,7 @@ class MultiplayerGameController {
 
   // send from game controller
   requestAnswer(question_index, answer) {
+    if (this.gameended) return;
     if (typeof question_index !== "number" || question_index < 0) {
       console.error("Invalid question index.");
       return;
@@ -302,6 +305,7 @@ class MultiplayerGameController {
   }
 
   verifyAnswer(data) {
+    if (this.gameended) return;
     if (this.gametype == "MAP") {
       this.funwithflags.handleMapClick(data.chosen_answer, data.correct_answer);
       setTimeout(() => {
@@ -341,7 +345,7 @@ class MultiplayerGameController {
   }
 
   moveToNextQuestion() {
-    if (this.currentQuestionIndex < this.totalquestions) {
+    if (this.currentQuestionIndex < this.totalquestions - 1) {
       this.currentQuestionIndex += 1;
       this.requestQuestion(this.currentQuestionIndex);
     }
@@ -502,11 +506,12 @@ class MultiplayerGameController {
   }
 
   timeover() {
+    this.gameended = true;
     alert("Game over");
     this.toggleSidebar();
   }
 
-  startTimer(minutes, onTimerEnd = () => {}) {
+  startTimer(minutes) {
     const timerSpan = document.getElementById("game-timer");
 
     if (!timerSpan) {
@@ -518,10 +523,14 @@ class MultiplayerGameController {
     updateDisplay();
 
     const timerInterval = setInterval(() => {
+      if (this.gameended) {
+        clearInterval(timerInterval);
+        return;
+      }
+
       if (totalSeconds <= 0) {
         clearInterval(timerInterval);
         timerSpan.textContent = "0:00";
-        onTimerEnd();
         return;
       }
 
@@ -537,6 +546,7 @@ class MultiplayerGameController {
   }
 
   endgame() {
+    this.gameended = true;
     alert("Game has ended");
     this.toggleSidebar();
     this.socket.send(

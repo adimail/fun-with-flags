@@ -115,8 +115,6 @@ class GameLogic {
         const userSelectedCountry = clickedFeature.get("name");
 
         this.handleMapClick(userSelectedCountry, this.currentQuestion.answer);
-      } else {
-        alert("Please select a valid country.");
       }
     });
   }
@@ -142,12 +140,83 @@ class GameLogic {
       this.highlightCountry(correctAnswer, "rgba(50, 205, 50, 0.6)", "#32CD32");
     }
 
+    this.fitCountriesInView(userSelectedCountry, correctAnswer, () => {
+      this.addTooltip(
+        userSelectedCountry,
+        isCorrect ? "rgba(50, 205, 50, 0.8)" : "rgba(255, 0, 0, 0.8)",
+      );
+
+      if (!isCorrect) {
+        this.addTooltip(correctAnswer, "rgba(50, 205, 50, 0.8)");
+      }
+    });
+
     setTimeout(() => {
       this.markerAddingDisabled = false;
       if (this.currentCallback) {
         this.currentCallback(isCorrect, userSelectedCountry, correctAnswer);
       }
     }, 4000);
+  }
+
+  fitCountriesInView(country1, country2, callback) {
+    const features = this.vectorSource.getFeatures();
+    const feature1 = features.find((f) => f.get("name") === country1);
+    const feature2 = features.find((f) => f.get("name") === country2);
+
+    if (feature1 && feature2) {
+      const extent1 = feature1.getGeometry().getExtent();
+      const extent2 = feature2.getGeometry().getExtent();
+      const combinedExtent = ol.extent.extend(extent1, extent2);
+
+      this.map.getView().fit(combinedExtent, {
+        duration: 500,
+        padding: [50, 50, 50, 50],
+      });
+
+      setTimeout(callback, 500);
+    } else {
+      console.warn(
+        `One or both countries ('${country1}', '${country2}') not found in the map source.`,
+      );
+    }
+  }
+
+  addTooltip(countryName, backgroundColor) {
+    const features = this.vectorSource.getFeatures();
+    const feature = features.find((f) => f.get("name") === countryName);
+
+    if (feature) {
+      const geometry = feature.getGeometry();
+      const extent = geometry.getExtent();
+      const center = ol.extent.getCenter(extent);
+
+      const tooltipElement = document.createElement("div");
+      tooltipElement.style.position = "absolute";
+      tooltipElement.style.color = "white";
+      tooltipElement.style.background = backgroundColor;
+      tooltipElement.style.padding = "5px 10px";
+      tooltipElement.style.borderRadius = "4px";
+      tooltipElement.style.border = "1px solid black";
+      tooltipElement.style.fontSize = "15px";
+      tooltipElement.style.whiteSpace = "nowrap";
+      tooltipElement.textContent = countryName;
+
+      const tooltipOverlay = new ol.Overlay({
+        element: tooltipElement,
+        position: center,
+        positioning: "center-center",
+        stopEvent: false,
+      });
+
+      this.map.addOverlay(tooltipOverlay);
+
+      setTimeout(() => {
+        this.map.removeOverlay(tooltipOverlay);
+      }, 3500);
+    } else {
+      console.warn(`Country '${countryName}' not found in the map source.`);
+    }
   }
 
   shuffleOptions(array) {
@@ -236,17 +305,6 @@ class GameLogic {
 
     highlightSource.clear();
 
-    const tooltip = document.createElement("div");
-    tooltip.style.position = "absolute";
-    tooltip.style.color = "black";
-    tooltip.style.padding = "5px";
-    tooltip.style.border = "1px solid black";
-    tooltip.style.display = "none";
-    tooltip.style.zIndex = "1000";
-    tooltip.style.background = backgroundColor;
-
-    document.body.appendChild(tooltip);
-
     const features = this.vectorSource.getFeatures();
     const feature = features.find((f) => f.get("name") === countryName);
 
@@ -256,24 +314,8 @@ class GameLogic {
       clonedFeature.setGeometry(geometry);
       highlightSource.addFeature(clonedFeature);
 
-      const extent = geometry.getExtent();
-      const center = ol.extent.getCenter(extent);
-      const pixel = this.map.getPixelFromCoordinate(center);
-
-      tooltip.style.display = "block";
-      tooltip.innerHTML = countryName;
-
-      requestAnimationFrame(() => {
-        const tooltipWidth = tooltip.offsetWidth;
-
-        tooltip.style.left = `${pixel[0] - tooltipWidth / 2}px`;
-        tooltip.style.top = `${pixel[1] + 10}px`;
-      });
-
       setTimeout(() => {
         highlightSource.clear();
-        tooltip.style.display = "none";
-        document.body.removeChild(tooltip);
       }, 4000);
     } else {
       console.warn(`Country '${countryName}' not found in the map source.`);

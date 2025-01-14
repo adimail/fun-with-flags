@@ -58,6 +58,7 @@ class WebSocketFunWithFlags {
         // This is the end point and this is when the game finished
         // and the websocket connections are erased after this point
         this.controller.endgame();
+        break;
       default:
         console.warn("Unhandled WebSocket event:", message.event);
     }
@@ -105,13 +106,6 @@ class WebSocketFunWithFlags {
     };
 
     socket.onmessage = this.handleWebSocketMessage.bind(this);
-
-    socket.onerror = (error) => {
-      this.controller.showErrorModal(
-        "WebSocket error occurred. GAme has ended",
-      );
-      console.error("WebSocket error:", error);
-    };
 
     socket.onclose = () => {
       console.log("WebSocket connection closed.");

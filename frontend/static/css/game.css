@@ -237,11 +237,10 @@ input[type="range"]::-moz-range-thumb {
 .game-type-selector {
   display: flex;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: 5px;
   justify-content: center;
   align-items: center;
-  margin-top: 20px;
-  padding: 10px 20px;
+  margin: 20px 0px;
   overflow: hidden;
 }
 
@@ -252,6 +251,7 @@ input[type="range"]::-moz-range-thumb {
   border: 2px solid var(--primary-color);
   border-radius: 10px;
   transition: all var(--transition-duration);
+  overflow: hidden;
 }
 
 .game-type-selector input[type="radio"] {
@@ -336,7 +336,7 @@ input[type="range"]::-moz-range-thumb {
 
 .map-flag {
   position: fixed;
-  bottom: 40px;
+  bottom: 60px;
   left: 10px;
   z-index: 999;
   max-width: 200px;
@@ -452,7 +452,6 @@ input[type="range"]::-moz-range-thumb {
 
   main {
     padding-top: 50px;
-    padding-bottom: 50px;
   }
 
   h1 {
@@ -541,7 +540,7 @@ input[type="range"]::-moz-range-thumb {
 
   #progress-map {
     position: fixed;
-    bottom: 60px;
+    bottom: 70px;
     background-color: white;
     padding: 5px;
     border-radius: 3px;

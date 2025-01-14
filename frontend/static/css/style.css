@@ -19,11 +19,23 @@ body {
   margin-top: 10px;
 }
 
+.gopher {
+  position: fixed;
+  bottom: 10px;
+  left: 10px;
+  height: 100px;
+  width: auto;
+}
+
 .container {
   width: 100%;
-  max-width: 600px;
+  max-width: 500px;
   padding: 2rem;
   position: relative;
+}
+
+.container header img {
+  width: 70%;
 }
 
 header {
