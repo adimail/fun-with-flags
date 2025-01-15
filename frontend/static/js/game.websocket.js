@@ -92,7 +92,7 @@ class WebSocketFunWithFlags {
   }
 
   openWebSocketConnection() {
-    const WS_BASE_URL = `ws://${window.location.host}/ws`;
+    const WS_BASE_URL = `wss://${window.location.host}/ws`;
     const socket = new WebSocket(WS_BASE_URL);
 
     socket.onopen = () => {
