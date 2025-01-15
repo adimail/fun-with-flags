@@ -92,7 +92,8 @@ class WebSocketFunWithFlags {
   }
 
   openWebSocketConnection() {
-    const socket = new WebSocket("ws://localhost:8080/ws");
+    const WS_BASE_URL = `ws://${window.location.host}/ws`;
+    const socket = new WebSocket(WS_BASE_URL);
 
     socket.onopen = () => {
       console.log("WebSocket connection established.");

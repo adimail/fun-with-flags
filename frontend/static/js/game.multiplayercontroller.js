@@ -547,6 +547,7 @@ class MultiplayerGameController {
 
   endgame() {
     this.gameended = true;
+    this.toggleSidebar();
     alert("Game has ended");
     this.toggleSidebar();
     this.socket.send(
